@@ -16,9 +16,11 @@ release: clean
 release: $(BIN)
 
 $(BIN): $(OBJS)
+	mkdir -p $(@D)
 	$(CC) $(CFLAGS) $(OBJS) -o $@
 
 $(OBJDIR)/%.o: $(SRCDIR)/%.c
+	mkdir -p $(@D)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 bear:
