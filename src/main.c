@@ -8,7 +8,9 @@ int main(int argc, char const *argv[]) {
   // chip8_load_rom(&chip8, (unsigned char[]){0xde, 0xad}, 2);
   
   // Loading a ROM
-  FILE *fd = fopen("roms/2-ibm-logo.ch8", "rb");
+  // FILE *fd = fopen("roms/2-ibm-logo.ch8", "rb");
+  FILE *fd = fopen("roms/1-chip8-logo.ch8", "rb");
+  // FILE *fd = fopen("roms/3-corax+.ch8", "rb");
   if (fd == NULL) {
     printf("No se pudo abrir\n");
     return -1;
@@ -17,8 +19,9 @@ int main(int argc, char const *argv[]) {
   int filesize = ftell(fd);
   rewind(fd);
   fread(&chip8.memory[0x200], 1, filesize, fd);
+  fclose(fd);
 
-  for (long i = 0; i < 50; i++) {
+  for (long i = 0; i < 500; i++) {
     chip8_step(&chip8);
   }
 

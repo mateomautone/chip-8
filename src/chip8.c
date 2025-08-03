@@ -2,7 +2,9 @@
 #include <chip8.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 // Load font data (050-09F apparent convention)
 static inline void load_font(Chip8 *chip8) {
@@ -42,6 +44,7 @@ void chip8_initialize(Chip8 *chip8) {
   chip8->DT = 0x00;
   chip8->ST = 0x00;
   load_font(chip8);
+  srand(time(NULL));
 }
 
 // Display Initialization
@@ -58,7 +61,7 @@ void chip8_print_registers(Chip8 *chip8, int flags) {
   if (flags & PRINT_STACK) {
     printf("Stack\t\t");
     for (int i = 0; i < 16; i++) {
-     printf("0x%04x ", chip8->stack[i]);
+      printf("0x%04x ", chip8->stack[i]);
     }
     printf("\n");
   }
@@ -148,7 +151,7 @@ then subtracts 1 from the stack pointer.
 static inline void ins_ret(Chip8 *chip8) {
   assert(chip8->SP < (sizeof(chip8->stack) / sizeof(chip8->PC)) &&
          chip8->SP >= 0);
-  chip8->PC = chip8->stack[chip8->SP]; 
+  chip8->PC = chip8->stack[chip8->SP];
   //% (sizeof(chip8->stack) / sizeof(chip8->PC))];
   chip8->SP--;
 #ifndef NDEBUG
@@ -224,7 +227,8 @@ The interpreter compares register Vx to register Vy, and if they are equal,
 increments the program counter by 2.
 */
 static inline void ins_se_vx_vy(Chip8 *chip8, uint16_t instruction) {
-  if (chip8->V[(instruction & 0x0F00) >> 8] == chip8->V[(instruction & 0x00F0) >> 4])
+  if (chip8->V[(instruction & 0x0F00) >> 8] ==
+      chip8->V[(instruction & 0x00F0) >> 4])
     chip8->PC += 2;
 #ifndef NDEBUG
   chip8_print_registers(chip8, PRINT_V);
@@ -258,6 +262,163 @@ static inline void ins_add_vx_byte(Chip8 *chip8, uint16_t instruction) {
 }
 
 /*
+8xy0 - LD Vx, Vy
+Set Vx = Vy.
+
+Stores the value of register Vy in register Vx.
+*/
+static inline void ins_ld_vx_vy(Chip8 *chip8, uint16_t instruction) {
+  chip8->V[(instruction & 0x0F00) >> 8] = chip8->V[(instruction & 0x00F0) >> 4];
+#ifndef NDEBUG
+  chip8_print_registers(chip8, PRINT_V);
+#endif
+}
+
+/*
+8xy1 - OR Vx, Vy
+Set Vx = Vx OR Vy.
+
+Performs a bitwise OR on the values of Vx and Vy, then stores the result in Vx.
+A bitwise OR compares the corrseponding bits from two values, and if either bit
+is 1, then the same bit in the result is also 1. Otherwise, it is 0.
+*/
+static inline void ins_or_vx_vy(Chip8 *chip8, uint16_t instruction) {
+  chip8->V[(instruction & 0x0F00) >> 8] |=
+      chip8->V[(instruction & 0x00F0) >> 4];
+#ifndef NDEBUG
+  chip8_print_registers(chip8, PRINT_V);
+#endif
+}
+
+/*
+8xy2 - AND Vx, Vy
+Set Vx = Vx AND Vy.
+
+Performs a bitwise AND on the values of Vx and Vy, then stores the result in Vx.
+A bitwise AND compares the corrseponding bits from two values, and if both bits
+are 1, then the same bit in the result is also 1. Otherwise, it is 0.
+*/
+static inline void ins_and_vx_vy(Chip8 *chip8, uint16_t instruction) {
+  chip8->V[(instruction & 0x0F00) >> 8] &=
+      chip8->V[(instruction & 0x00F0) >> 4];
+#ifndef NDEBUG
+  chip8_print_registers(chip8, PRINT_V);
+#endif
+}
+
+/*
+8xy3 - XOR Vx, Vy
+Set Vx = Vx XOR Vy.
+
+Performs a bitwise exclusive OR on the values of Vx and Vy, then stores the
+result in Vx. An exclusive OR compares the corrseponding bits from two values,
+and if the bits are not both the same, then the corresponding bit in the result
+is set to 1. Otherwise, it is 0.
+*/
+static inline void ins_xor_vx_vy(Chip8 *chip8, uint16_t instruction) {
+  chip8->V[(instruction & 0x0F00) >> 8] ^=
+      chip8->V[(instruction & 0x00F0) >> 4];
+#ifndef NDEBUG
+  chip8_print_registers(chip8, PRINT_V);
+#endif
+}
+
+/*
+8xy4 - ADD Vx, Vy
+Set Vx = Vx + Vy, set VF = carry.
+
+The values of Vx and Vy are added together. If the result is greater than 8 bits
+(i.e., > 255,) VF is set to 1, otherwise 0. Only the lowest 8 bits of the result
+are kept, and stored in Vx.
+*/
+static inline void ins_add_vx_vy(Chip8 *chip8, uint16_t instruction) {
+  chip8->V[(instruction & 0x0F00) >> 8] +=
+      chip8->V[(instruction & 0x00F0) >> 4];
+#ifndef NDEBUG
+  chip8_print_registers(chip8, PRINT_V);
+#endif
+}
+
+/*
+8xy5 - SUB Vx, Vy
+Set Vx = Vx - Vy, set VF = NOT borrow.
+
+If Vx > Vy, then VF is set to 1, otherwise 0. Then Vy is subtracted from Vx, and
+the results stored in Vx.
+*/
+static inline void ins_sub_vx_vy(Chip8 *chip8, uint16_t instruction) {
+  chip8->V[(instruction & 0x0F00) >> 8] -=
+      chip8->V[(instruction & 0x00F0) >> 4];
+#ifndef NDEBUG
+  chip8_print_registers(chip8, PRINT_V);
+#endif
+}
+
+/*
+8xy6 - SHR Vx {, Vy}
+Set Vx = Vx SHR 1.
+
+If the least-significant bit of Vx is 1, then VF is set to 1, otherwise 0. Then
+Vx is divided by 2.
+*/
+static inline void ins_shr_vx(Chip8 *chip8, uint16_t instruction) {
+  chip8->V[0xF] = chip8->V[(instruction & 0x0F00) >> 8] & 0x1;
+  chip8->V[(instruction & 0x0F00) >> 8] >>= 1;
+#ifndef NDEBUG
+  chip8_print_registers(chip8, PRINT_V);
+#endif
+}
+
+/*
+8xy7 - SUBN Vx, Vy
+Set Vx = Vy - Vx, set VF = NOT borrow.
+
+If Vy > Vx, then VF is set to 1, otherwise 0. Then Vx is subtracted from Vy, and
+the results stored in Vx.
+*/
+static inline void ins_subn_vx_vy(Chip8 *chip8, uint16_t instruction) {
+  chip8->V[0xF] = chip8->V[(instruction & 0x0F00) >> 8] >
+                  chip8->V[(instruction & 0x00F0) >> 4];
+  chip8->V[(instruction & 0x0F00) >> 8] =
+      chip8->V[(instruction & 0x00F0) >> 4] -
+      chip8->V[(instruction & 0x0F00) >> 8];
+#ifndef NDEBUG
+  chip8_print_registers(chip8, PRINT_V);
+#endif
+}
+
+/*
+8xyE - SHL Vx {, Vy}
+Set Vx = Vx SHL 1.
+
+If the most-significant bit of Vx is 1, then VF is set to 1, otherwise to 0.
+Then Vx is multiplied by 2.
+*/
+static inline void ins_shl_vx(Chip8 *chip8, uint16_t instruction) {
+  chip8->V[0xF] = (chip8->V[(instruction & 0x0F00) >> 8] >> 7) & 0x1;
+  chip8->V[(instruction & 0x0F00) >> 8] <<= 1;
+#ifndef NDEBUG
+  chip8_print_registers(chip8, PRINT_V);
+#endif
+}
+
+/*
+9xy0 - SNE Vx, Vy
+Skip next instruction if Vx != Vy.
+
+The values of Vx and Vy are compared, and if they are not equal, the program
+counter is increased by 2.
+*/
+static inline void ins_sne_vx_vy(Chip8 *chip8, uint16_t instruction) {
+  if (chip8->V[(instruction & 0x0F00) >> 8] !=
+      chip8->V[(instruction & 0x00F0) >> 4])
+    chip8->PC += 2;
+#ifndef NDEBUG
+  chip8_print_registers(chip8, PRINT_V | PRINT_PC);
+#endif
+}
+
+/*
 Annn - LD I, addr
 Set I = nnn.
 
@@ -267,6 +428,32 @@ static inline void ins_ld_i_addr(Chip8 *chip8, uint16_t instruction) {
   chip8->I = instruction & 0x0FFF;
 #ifndef NDEBUG
   chip8_print_registers(chip8, PRINT_I);
+#endif
+}
+
+/*
+Bnnn - JP V0, addr
+Jump to location nnn + V0.
+
+The program counter is set to nnn plus the value of V0.
+*/
+static inline void ins_jp_v0_addr(Chip8 *chip8, uint16_t instruction) {
+  chip8->PC = (instruction & 0x0FFF) + chip8->V[0];
+#ifndef NDEBUG
+  chip8_print_registers(chip8, PRINT_PC);
+#endif
+}
+
+/*
+Cxkk - RND Vx, byte
+Set Vx = random byte AND kk.
+
+The interpreter generates a random number from 0 to 255, which is then ANDed with the value kk. The results are stored in Vx. See instruction 8xy2 for more information on AND.
+*/
+static inline void ins_rnd_vx_byte(Chip8 *chip8, uint16_t instruction) {
+  chip8->V[(instruction & 0x0F00) >> 8] = (uint8_t)rand() & (instruction & 0x00FF);
+#ifndef NDEBUG
+  chip8_print_registers(chip8, PRINT_V);
 #endif
 }
 
@@ -284,25 +471,46 @@ opposite side of the screen. See instruction 8xy3 for more information on XOR,
 and section 2.4, Display, for more information on the Chip-8 screen and sprites.
 */
 static inline void ins_drw_vx_vy(Chip8 *chip8, uint16_t instruction) {
-  unsigned char x = chip8->V[(instruction & 0x0F00) >> 8];
-  unsigned char y = chip8->V[(instruction & 0x00F0) >> 4];
-  assert(x < CHIP8_DISPLAY_WIDTH);
-  assert(y < CHIP8_DISPLAY_HEIGHT);
+  unsigned char x = chip8->V[(instruction & 0x0F00) >> 8] % CHIP8_DISPLAY_WIDTH;
+  unsigned char y = chip8->V[(instruction & 0x00F0) >> 4] % CHIP8_DISPLAY_HEIGHT;
+  // assert(x < CHIP8_DISPLAY_WIDTH);
+  // assert(y < CHIP8_DISPLAY_HEIGHT);
   assert(chip8->I < CHIP8_MEM_SIZE);
   assert(chip8->I + (instruction & 0x000F) < CHIP8_MEM_SIZE);
+  unsigned char pixel_erased = 0;
   for (unsigned char i = 0; i < (instruction & 0x000F); i++) {
     uint8_t spritebyte = chip8->memory[chip8->I + i];
-    //chip8->V[0xF] =
-    //    (0xFF & ((spritebyte >> (x % 8) | chip8->display[y + i][x / 8]) ^
-    //             (spritebyte >> (x % 8) ^ chip8->display[y + i][x / 8]))) &&
-    //    (0xFF & ((spritebyte >> (8 - (x % 8)) | chip8->display[y + i][x / 8 + 1]) ^
-    //             (spritebyte >> (8 - (x % 8)) ^ chip8->display[y + i][x / 8 + 1])));
-    chip8->V[0xF] = chip8->display[(y+i) % CHIP8_DISPLAY_HEIGHT][x/8] & spritebyte >> (x % 8) && chip8->display[(y+i) % CHIP8_DISPLAY_HEIGHT][(x/8 + 1) % (CHIP8_DISPLAY_WIDTH / 8)] & spritebyte << (8 - (x % 8));
-    chip8->display[(y + i) % CHIP8_DISPLAY_HEIGHT][(x / 8)] ^= spritebyte >> (x % 8);
-    chip8->display[(y + i) % CHIP8_DISPLAY_HEIGHT][(x / 8 + 1) % (CHIP8_DISPLAY_WIDTH / 8)] ^= spritebyte << (8 - (x % 8));
+    // chip8->V[0xF] =
+    //     (0xFF & ((spritebyte >> (x % 8) | chip8->display[y + i][x / 8]) ^
+    //              (spritebyte >> (x % 8) ^ chip8->display[y + i][x / 8]))) &&
+    //     (0xFF & ((spritebyte >> (8 - (x % 8)) | chip8->display[y + i][x / 8 +
+    //     1]) ^
+    //              (spritebyte >> (8 - (x % 8)) ^ chip8->display[y + i][x / 8 +
+    //              1])));
+    pixel_erased |= chip8->display[(y + i) % CHIP8_DISPLAY_HEIGHT][x / 8] &
+                        spritebyte >> (x % 8) &&
+                    chip8->display[(y + i) % CHIP8_DISPLAY_HEIGHT]
+                                  [(x / 8 + 1) % (CHIP8_DISPLAY_WIDTH / 8)] &
+                        spritebyte << (8 - (x % 8));
+    chip8->display[(y + i) % CHIP8_DISPLAY_HEIGHT][(x / 8)] ^=
+        spritebyte >> (x % 8);
+    chip8->display[(y + i) % CHIP8_DISPLAY_HEIGHT]
+                  [(x / 8 + 1) % (CHIP8_DISPLAY_WIDTH / 8)] ^= spritebyte
+                                                               << (8 - (x % 8));
   }
-  chip8_print_display(chip8, '#',' ');
+  chip8->V[0xF] = pixel_erased;
+  chip8_print_display(chip8, '#', ' ');
   // chip8->display[chip8->V[y]][chip8->V[x]];
+}
+
+/*
+Ex9E - SKP Vx
+Skip next instruction if key with the value of Vx is pressed.
+
+Checks the keyboard, and if the key corresponding to the value of Vx is currently in the down position, PC is increased by 2.
+*/
+static inline void ins_skp_vx(Chip8 *chip8, uint16_t instruction) {
+//TODO
 }
 
 // Fetch and instruction and increase Program Counter by 2
@@ -343,7 +551,13 @@ static inline void chip8_decode_execute(Chip8 *chip8, uint16_t instruction) {
       ins_sne_vx_byte(chip8, instruction);
       break;
     case 0x5000:
-      ins_se_vx_vy(chip8, instruction);
+      switch (instruction & 0x000F) {
+        case 0x0000:
+          ins_se_vx_vy(chip8, instruction);
+          break;
+        default:
+          printf("Unknown Instruction found: %04x\n", instruction);
+      }
       break;
     case 0x6000:
       ins_ld_vx_byte(chip8, instruction);
@@ -351,8 +565,53 @@ static inline void chip8_decode_execute(Chip8 *chip8, uint16_t instruction) {
     case 0x7000:
       ins_add_vx_byte(chip8, instruction);
       break;
+    case 0x8000:
+      switch (instruction & 0x000F) {
+      case 0x0001:
+        ins_or_vx_vy(chip8, instruction);
+        break;
+      case 0x0002:
+        ins_and_vx_vy(chip8, instruction);
+        break;
+      case 0x0003:
+        ins_xor_vx_vy(chip8, instruction);
+        break;
+      case 0x0004:
+        ins_add_vx_vy(chip8, instruction);
+        break;
+      case 0x0005:
+        ins_sub_vx_vy(chip8, instruction);
+        break;
+      case 0x0006:
+        ins_shr_vx(chip8, instruction);
+        break;
+      case 0x0007:
+        ins_subn_vx_vy(chip8, instruction);
+        break;
+      case 0x000E:
+        ins_shl_vx(chip8, instruction);
+        break;
+      default:
+        printf("Unknown Instruction found: %04x\n", instruction);
+      }
+      break;
+    case 0x9000:
+      switch (instruction & 0x000F) {
+        case 0x0000:
+          ins_sne_vx_vy(chip8, instruction);  
+          break;
+        default:
+        printf("Unknown Instruction found: %04x\n", instruction);
+      }
+      break;
     case 0xA000:
       ins_ld_i_addr(chip8, instruction);
+      break;
+    case 0xB000:
+      ins_jp_v0_addr(chip8, instruction);
+      break;
+    case 0xC000:
+      ins_rnd_vx_byte(chip8, instruction);
       break;
     case 0xD000:
       ins_drw_vx_vy(chip8, instruction);
