@@ -11,7 +11,7 @@ BIN=$(BINDIR)/main
 
 all: $(BIN)
 
-release: CFLAGS=-Wall -O2 -DNDEBUG -I $(INCLUDEDIR)
+release: CFLAGS=-Wall -O2 -DNDEBUG -g -I $(INCLUDEDIR)
 release: clean
 release: $(BIN)
 

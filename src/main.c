@@ -1,15 +1,26 @@
 #include <chip8.h>
+#include <stdio.h>
 
 int main(int argc, char const *argv[]) {
   Chip8 chip8;
-  Chip8Display display;
   chip8_initialize(&chip8);
-  chip8_display_initialize(&display);
-  chip8_load_rom(&chip8, (unsigned char[]){0xde, 0xad}, 2);
-  chip8_mem_hexdump(&chip8, 0, CHIP8_MEM_SIZE - 1);
-  chip8_print_registers(&chip8);
-  chip8_print_display(&display);
+  chip8_display_initialize(&chip8);
+  // chip8_load_rom(&chip8, (unsigned char[]){0xde, 0xad}, 2);
+  
+  // Loading a ROM
+  FILE *fd = fopen("roms/2-ibm-logo.ch8", "rb");
+  if (fd == NULL) {
+    printf("No se pudo abrir\n");
+    return -1;
+  }
+  fseek(fd, 0, SEEK_END);
+  int filesize = ftell(fd);
+  rewind(fd);
+  fread(&chip8.memory[0x200], 1, filesize, fd);
 
-  /* code */
+  for (long i = 0; i < 50; i++) {
+    chip8_step(&chip8);
+  }
+
   return 0;
 }

@@ -7,23 +7,23 @@
 // Load font data (050-09F apparent convention)
 static inline void load_font(Chip8 *chip8) {
   uint8_t fontset[16 * 5] = {
-        0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
-        0x20, 0x60, 0x20, 0x20, 0x70, // 1
-        0xF0, 0x10, 0xF0, 0x80, 0xF0, // 2
-        0xF0, 0x10, 0xF0, 0x10, 0xF0, // 3
-        0x90, 0x90, 0xF0, 0x10, 0x10, // 4
-        0xF0, 0x80, 0xF0, 0x10, 0xF0, // 5
-        0xF0, 0x80, 0xF0, 0x90, 0xF0, // 6
-        0xF0, 0x10, 0x20, 0x40, 0x40, // 7
-        0xF0, 0x90, 0xF0, 0x90, 0xF0, // 8
-        0xF0, 0x90, 0xF0, 0x10, 0xF0, // 9
-        0xF0, 0x90, 0xF0, 0x90, 0x90, // A
-        0xE0, 0x90, 0xE0, 0x90, 0xE0, // B
-        0xF0, 0x80, 0x80, 0x80, 0xF0, // C
-        0xE0, 0x90, 0x90, 0x90, 0xE0, // D
-        0xF0, 0x80, 0xF0, 0x80, 0xF0, // E
-        0xF0, 0x80, 0xF0, 0x80, 0x80  // F
-    };
+      0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
+      0x20, 0x60, 0x20, 0x20, 0x70, // 1
+      0xF0, 0x10, 0xF0, 0x80, 0xF0, // 2
+      0xF0, 0x10, 0xF0, 0x10, 0xF0, // 3
+      0x90, 0x90, 0xF0, 0x10, 0x10, // 4
+      0xF0, 0x80, 0xF0, 0x10, 0xF0, // 5
+      0xF0, 0x80, 0xF0, 0x90, 0xF0, // 6
+      0xF0, 0x10, 0x20, 0x40, 0x40, // 7
+      0xF0, 0x90, 0xF0, 0x90, 0xF0, // 8
+      0xF0, 0x90, 0xF0, 0x10, 0xF0, // 9
+      0xF0, 0x90, 0xF0, 0x90, 0x90, // A
+      0xE0, 0x90, 0xE0, 0x90, 0xE0, // B
+      0xF0, 0x80, 0x80, 0x80, 0xF0, // C
+      0xE0, 0x90, 0x90, 0x90, 0xE0, // D
+      0xF0, 0x80, 0xF0, 0x80, 0xF0, // E
+      0xF0, 0x80, 0xF0, 0x80, 0x80  // F
+  };
   // for (uint16_t i = 0; i < sizeof(fontset); i++) {
   //   chip8->memory[0x50 + i] = fontset[i];
   // }
@@ -32,31 +32,47 @@ static inline void load_font(Chip8 *chip8) {
 
 // Initialize the CHIP8 values
 void chip8_initialize(Chip8 *chip8) {
-  *chip8 = (Chip8){0};
+  // *chip8 = (Chip8){0};
+  memset(chip8->memory, 0x00, sizeof(chip8->memory));
+  memset(chip8->stack, 0x00, sizeof(chip8->stack));
+  memset(chip8->V, 0x00, sizeof(chip8->V));
   chip8->PC = 0x200;
+  chip8->SP = 0x00;
+  chip8->I = 0x0000;
+  chip8->DT = 0x00;
+  chip8->ST = 0x00;
   load_font(chip8);
 }
 
 // Display Initialization
-void chip8_display_initialize(Chip8Display *display){
-  *display = (Chip8Display){0};
-  // memset(display, 0xFA, sizeof(*display));
+void chip8_display_initialize(Chip8 *chip8) {
+  memset(chip8->display, 0, sizeof(chip8->display));
 }
 
 // Print Registers
-void chip8_print_registers(Chip8 *chip8) {
-  printf("Program Counter\t0x%04x\n", chip8->PC);
-  printf("Stack Pointer\t0x%02x\n", chip8->SP);
-  printf("Stack\t\t");
-  for (int i = 0; i < 16; i++) {
-    printf("0x%04x ", chip8->stack[i]);
+void chip8_print_registers(Chip8 *chip8, int flags) {
+  if (flags & PRINT_PC)
+    printf("Program Counter\t0x%04x\n", chip8->PC);
+  if (flags & PRINT_SP)
+    printf("Stack Pointer\t0x%02x\n", chip8->SP);
+  if (flags & PRINT_STACK) {
+    printf("Stack\t\t");
+    for (int i = 0; i < 16; i++) {
+     printf("0x%04x ", chip8->stack[i]);
+    }
+    printf("\n");
   }
-  printf("\nI Register\t0x%04x\n", chip8->I);
-  for (int i = 0; i < 16; i++) {
-    printf("V%X Register\t0x%02x\n", i, chip8->V[i]);
+  if (flags & PRINT_I)
+    printf("I Register\t0x%04x\n", chip8->I);
+  if (flags & PRINT_V) {
+    for (int i = 0; i < 16; i++) {
+      printf("V%X Register\t0x%02x\n", i, chip8->V[i]);
+    }
   }
-  printf("Delay Timer\t0x%02x\n", chip8->DT);
-  printf("Sound Timer\t0x%02x\n", chip8->ST);
+  if (flags & PRINT_DT)
+    printf("Delay Timer\t0x%02x\n", chip8->DT);
+  if (flags & PRINT_ST)
+    printf("Sound Timer\t0x%02x\n", chip8->ST);
 }
 
 // Hexdump memory region
@@ -64,8 +80,8 @@ void chip8_mem_hexdump(Chip8 *chip8, uint16_t start_addr, uint16_t end_addr) {
   assert(start_addr <= end_addr);
   assert(end_addr < CHIP8_MEM_SIZE);
   const int bytes_per_line = 32;
-  for (int newline_counter = 0;start_addr<=end_addr;start_addr++) {
-    if (newline_counter == bytes_per_line){
+  for (int newline_counter = 0; start_addr <= end_addr; start_addr++) {
+    if (newline_counter == bytes_per_line) {
       newline_counter = 0;
       printf("\n");
     }
@@ -78,12 +94,11 @@ void chip8_mem_hexdump(Chip8 *chip8, uint16_t start_addr, uint16_t end_addr) {
 }
 
 // Print Display
-void chip8_print_display(Chip8Display *display){
-  for (int h = 0; h < CHIP8_DISPLAY_HSIZE; h++) {
-    for (int v = 0; v < CHIP8_DISPLAY_VSIZE / 8; v++) {
-      // printf("%02x",display->display[h][v]);
+void chip8_print_display(Chip8 *chip8, char on_char, char off_char) {
+  for (int h = 0; h < CHIP8_DISPLAY_HEIGHT; h++) {
+    for (int w = 0; w < CHIP8_DISPLAY_WIDTH / 8; w++) {
       for (int p = 7; p >= 0; p--) {
-        printf("%d", display->display[h][v] & (1 << p) ? 1 : 0);
+        printf("%c", chip8->display[h][w] & (1 << p) ? on_char : off_char);
       }
     }
     printf("\n");
@@ -95,20 +110,15 @@ void chip8_load_rom(Chip8 *chip8, const uint8_t *rom, uint16_t size) {
   memcpy(&chip8->memory[0x200], rom, size);
 }
 
-static inline uint16_t chip8_fetch(Chip8 *chip8) {
-  uint16_t instruction = (chip8->memory[chip8->PC] << 8) + chip8->memory[chip8->PC + 1];
-  chip8->PC += 2;
-  return instruction;
-}
+/*
+Instruction Reference: http://devernay.free.fr/hacks/chip8/C8TECH10.HTM
 
-// Execute a single instruction
-void chip8_step(Chip8 *chip8) {
-  printf("Instruction: %04x\n", chip8_fetch(chip8));
-}
-
-// I guess i will start implementing instructions and then figure out the decode
-// logic 
-// Instruction Reference: http://devernay.free.fr/hacks/chip8/C8TECH10.HTM
+nnn or addr - A 12-bit value, the lowest 12 bits of the instruction
+n or nibble - A 4-bit value, the lowest 4 bits of the instruction
+x - A 4-bit value, the lower 4 bits of the high byte of the instruction
+y - A 4-bit value, the upper 4 bits of the low byte of the instruction
+kk or byte - An 8-bit value, the lowest 8 bits of the instruction
+*/
 
 /*
 0nnn - SYS addr
@@ -117,4 +127,243 @@ Jump to a machine code routine at nnn.
 This instruction is only used on the old computers on which Chip-8 was
 originally implemented. It is ignored by modern interpreters.
 */
-static inline void ins_sys_addr(Chip8 *chip8, uint16_t opcode) {}
+static inline void ins_sys_addr(Chip8 *chip8, uint16_t instruction) {}
+
+/*
+00E0 - CLS
+Clear the display.
+*/
+static inline void ins_cls(Chip8 *chip8) {
+  memset(chip8->display, 0x0, sizeof(chip8->display));
+  chip8_print_display(chip8, '#', ' ');
+}
+
+/*
+00EE - RET
+Return from a subroutine.
+
+The interpreter sets the program counter to the address at the top of the stack,
+then subtracts 1 from the stack pointer.
+*/
+static inline void ins_ret(Chip8 *chip8) {
+  assert(chip8->SP < (sizeof(chip8->stack) / sizeof(chip8->PC)) &&
+         chip8->SP >= 0);
+  chip8->PC = chip8->stack[chip8->SP]; 
+  //% (sizeof(chip8->stack) / sizeof(chip8->PC))];
+  chip8->SP--;
+#ifndef NDEBUG
+  chip8_print_registers(chip8, PRINT_SP | PRINT_STACK | PRINT_PC);
+#endif
+}
+
+/*
+1nnn - JP addr
+Jump to location nnn.
+
+The interpreter sets the program counter to nnn.
+*/
+static inline void ins_jp_addr(Chip8 *chip8, uint16_t instruction) {
+  chip8->PC = instruction & 0x0FFF;
+#ifndef NDEBUG
+  chip8_print_registers(chip8, PRINT_PC);
+#endif
+}
+
+/*
+2nnn - CALL addr
+Call subroutine at nnn.
+
+The interpreter increments the stack pointer, then puts the current PC on the
+top of the stack. The PC is then set to nnn.
+*/
+static inline void ins_call_addr(Chip8 *chip8, uint16_t instruction) {
+  assert(chip8->SP < (sizeof(chip8->stack) / sizeof(chip8->PC)));
+  chip8->SP++;
+  chip8->stack[chip8->SP] = chip8->PC;
+  chip8->PC = instruction & 0x0FFF;
+#ifndef NDEBUG
+  chip8_print_registers(chip8, PRINT_STACK | PRINT_SP | PRINT_PC);
+#endif
+}
+
+/*
+3xkk - SE Vx, byte
+Skip next instruction if Vx = kk.
+
+The interpreter compares register Vx to kk, and if they are equal, increments
+the program counter by 2.
+*/
+static inline void ins_se_vx_byte(Chip8 *chip8, uint16_t instruction) {
+  if (chip8->V[(instruction & 0x0F00) >> 8] == (instruction & 0x00FF))
+    chip8->PC += 2;
+#ifndef NDEBUG
+  chip8_print_registers(chip8, PRINT_V);
+#endif
+}
+
+/*
+4xkk - SNE Vx, byte
+Skip next instruction if Vx != kk.
+
+The interpreter compares register Vx to kk, and if they are not equal,
+increments the program counter by 2.
+*/
+static inline void ins_sne_vx_byte(Chip8 *chip8, uint16_t instruction) {
+  if (chip8->V[(instruction & 0x0F00) >> 8] != (instruction & 0x00FF))
+    chip8->PC += 2;
+#ifndef NDEBUG
+  chip8_print_registers(chip8, PRINT_V);
+#endif
+}
+
+/*
+5xy0 - SE Vx, Vy
+Skip next instruction if Vx = Vy.
+
+The interpreter compares register Vx to register Vy, and if they are equal,
+increments the program counter by 2.
+*/
+static inline void ins_se_vx_vy(Chip8 *chip8, uint16_t instruction) {
+  if (chip8->V[(instruction & 0x0F00) >> 8] == chip8->V[(instruction & 0x00F0) >> 4])
+    chip8->PC += 2;
+#ifndef NDEBUG
+  chip8_print_registers(chip8, PRINT_V);
+#endif
+}
+
+/*
+6xkk - LD Vx, byte
+Set Vx = kk.
+
+The interpreter puts the value kk into register Vx.
+*/
+static inline void ins_ld_vx_byte(Chip8 *chip8, uint16_t instruction) {
+  chip8->V[(instruction & 0x0F00) >> 8] = instruction & 0x00FF;
+#ifndef NDEBUG
+  chip8_print_registers(chip8, PRINT_V);
+#endif
+}
+
+/*
+7xkk - ADD Vx, byte
+Set Vx = Vx + kk.
+
+Adds the value kk to the value of register Vx, then stores the result in Vx.
+*/
+static inline void ins_add_vx_byte(Chip8 *chip8, uint16_t instruction) {
+  chip8->V[(instruction & 0x0F00) >> 8] += instruction & 0x00FF;
+#ifndef NDEBUG
+  chip8_print_registers(chip8, PRINT_V);
+#endif
+}
+
+/*
+Annn - LD I, addr
+Set I = nnn.
+
+The value of register I is set to nnn.
+*/
+static inline void ins_ld_i_addr(Chip8 *chip8, uint16_t instruction) {
+  chip8->I = instruction & 0x0FFF;
+#ifndef NDEBUG
+  chip8_print_registers(chip8, PRINT_I);
+#endif
+}
+
+/*
+Dxyn - DRW Vx, Vy, nibble
+Display n-byte sprite starting at memory location I at (Vx, Vy), set VF =
+collision.
+
+The interpreter reads n bytes from memory, starting at the address stored in I.
+These bytes are then displayed as sprites on screen at coordinates (Vx, Vy).
+Sprites are XORed onto the existing screen. If this causes any pixels to be
+erased, VF is set to 1, otherwise it is set to 0. If the sprite is positioned so
+part of it is outside the coordinates of the display, it wraps around to the
+opposite side of the screen. See instruction 8xy3 for more information on XOR,
+and section 2.4, Display, for more information on the Chip-8 screen and sprites.
+*/
+static inline void ins_drw_vx_vy(Chip8 *chip8, uint16_t instruction) {
+  unsigned char x = chip8->V[(instruction & 0x0F00) >> 8];
+  unsigned char y = chip8->V[(instruction & 0x00F0) >> 4];
+  assert(x < CHIP8_DISPLAY_WIDTH);
+  assert(y < CHIP8_DISPLAY_HEIGHT);
+  assert(chip8->I < CHIP8_MEM_SIZE);
+  assert(chip8->I + (instruction & 0x000F) < CHIP8_MEM_SIZE);
+  for (unsigned char i = 0; i < (instruction & 0x000F); i++) {
+    uint8_t spritebyte = chip8->memory[chip8->I + i];
+    //chip8->V[0xF] =
+    //    (0xFF & ((spritebyte >> (x % 8) | chip8->display[y + i][x / 8]) ^
+    //             (spritebyte >> (x % 8) ^ chip8->display[y + i][x / 8]))) &&
+    //    (0xFF & ((spritebyte >> (8 - (x % 8)) | chip8->display[y + i][x / 8 + 1]) ^
+    //             (spritebyte >> (8 - (x % 8)) ^ chip8->display[y + i][x / 8 + 1])));
+    chip8->V[0xF] = chip8->display[(y+i) % CHIP8_DISPLAY_HEIGHT][x/8] & spritebyte >> (x % 8) && chip8->display[(y+i) % CHIP8_DISPLAY_HEIGHT][(x/8 + 1) % (CHIP8_DISPLAY_WIDTH / 8)] & spritebyte << (8 - (x % 8));
+    chip8->display[(y + i) % CHIP8_DISPLAY_HEIGHT][(x / 8)] ^= spritebyte >> (x % 8);
+    chip8->display[(y + i) % CHIP8_DISPLAY_HEIGHT][(x / 8 + 1) % (CHIP8_DISPLAY_WIDTH / 8)] ^= spritebyte << (8 - (x % 8));
+  }
+  chip8_print_display(chip8, '#',' ');
+  // chip8->display[chip8->V[y]][chip8->V[x]];
+}
+
+// Fetch and instruction and increase Program Counter by 2
+static inline uint16_t chip8_fetch(Chip8 *chip8) {
+  uint16_t instruction =
+      (chip8->memory[chip8->PC] << 8) + chip8->memory[chip8->PC + 1];
+  chip8->PC += 2;
+#ifndef NDEBUG
+  printf("Fetching Instruction: %04x\n", instruction);
+#endif
+  return instruction;
+}
+
+// Decode and execute an instruction
+static inline void chip8_decode_execute(Chip8 *chip8, uint16_t instruction) {
+  switch (instruction) {
+  case 0x00E0:
+    ins_cls(chip8);
+    break;
+  case 0x00EE:
+    ins_ret(chip8);
+    break;
+  default:
+    switch (instruction & 0xF000) {
+    case 0x0000:
+      ins_sys_addr(chip8, instruction);
+      break;
+    case 0x1000:
+      ins_jp_addr(chip8, instruction);
+      break;
+    case 0x2000:
+      ins_call_addr(chip8, instruction);
+      break;
+    case 0x3000:
+      ins_se_vx_byte(chip8, instruction);
+      break;
+    case 0x4000:
+      ins_sne_vx_byte(chip8, instruction);
+      break;
+    case 0x5000:
+      ins_se_vx_vy(chip8, instruction);
+      break;
+    case 0x6000:
+      ins_ld_vx_byte(chip8, instruction);
+      break;
+    case 0x7000:
+      ins_add_vx_byte(chip8, instruction);
+      break;
+    case 0xA000:
+      ins_ld_i_addr(chip8, instruction);
+      break;
+    case 0xD000:
+      ins_drw_vx_vy(chip8, instruction);
+      break;
+    default:
+      printf("Unknown Instruction found: %04x\n", instruction);
+    }
+  }
+}
+
+// Execute a single instruction
+void chip8_step(Chip8 *chip8) {
+  chip8_decode_execute(chip8, chip8_fetch(chip8));
+}
