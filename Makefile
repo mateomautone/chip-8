@@ -7,7 +7,7 @@ OBJDIR=obj
 BINDIR=bin
 SRCS=$(wildcard $(SRCDIR)/*.c)
 OBJS=$(patsubst $(SRCDIR)/%.c, $(OBJDIR)/%.o, $(SRCS))
-BIN=$(BINDIR)/main
+BIN=$(BINDIR)/ch8run
 
 all: $(BIN)
 

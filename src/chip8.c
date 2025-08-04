@@ -29,7 +29,7 @@ static inline void load_font(Chip8 *chip8) {
   // for (uint16_t i = 0; i < sizeof(fontset); i++) {
   //   chip8->memory[0x50 + i] = fontset[i];
   // }
-  memcpy(&chip8->memory[0x50], fontset, sizeof(fontset));
+  memcpy(&chip8->memory[CHIP8_FONT_DATA_START], fontset, sizeof(fontset));
 }
 
 // Initialize the CHIP8 values
@@ -43,14 +43,16 @@ void chip8_initialize(Chip8 *chip8) {
   chip8->I = 0x0000;
   chip8->DT = 0x00;
   chip8->ST = 0x00;
+  chip8->keyboard.value = 0x0000;
   load_font(chip8);
   srand(time(NULL));
+  memset(chip8->display, 0, sizeof(chip8->display));
 }
 
 // Display Initialization
-void chip8_display_initialize(Chip8 *chip8) {
-  memset(chip8->display, 0, sizeof(chip8->display));
-}
+// void chip8_display_initialize(Chip8 *chip8) {
+  // memset(chip8->display, 0, sizeof(chip8->display));
+// }
 
 // Print Registers
 void chip8_print_registers(Chip8 *chip8, int flags) {
@@ -76,6 +78,9 @@ void chip8_print_registers(Chip8 *chip8, int flags) {
     printf("Delay Timer\t0x%02x\n", chip8->DT);
   if (flags & PRINT_ST)
     printf("Sound Timer\t0x%02x\n", chip8->ST);
+  if (flags & PRINT_KEYS) {
+    printf("Keyboard:\t0x%04x\n", chip8->keyboard.value);
+  }
 }
 
 // Hexdump memory region
@@ -108,9 +113,30 @@ void chip8_print_display(Chip8 *chip8, char on_char, char off_char) {
   }
 }
 
+// Load a ROM from memory
 void chip8_load_rom(Chip8 *chip8, const uint8_t *rom, uint16_t size) {
   assert(size < CHIP8_MEM_SIZE - 0x200);
   memcpy(&chip8->memory[0x200], rom, size);
+}
+
+// Load a ROM from file
+int chip8_load_rom_from_file(Chip8 *chip8, const char *filename) {
+  FILE *fd = fopen(filename, "rb");
+  if (fd == NULL) {
+    printf("Could not open file\n");
+    return -1;
+  }
+  fseek(fd, 0, SEEK_END);
+  int filesize = ftell(fd);
+  rewind(fd);
+  if (filesize > CHIP8_MEM_SIZE) {
+    printf("ROM is too big!\n");
+    fclose(fd);
+    return -1;
+  }
+  fread(&chip8->memory[0x200], 1, filesize, fd);
+  fclose(fd);
+  return 0;
 }
 
 /*
@@ -130,7 +156,11 @@ Jump to a machine code routine at nnn.
 This instruction is only used on the old computers on which Chip-8 was
 originally implemented. It is ignored by modern interpreters.
 */
-static inline void ins_sys_addr(Chip8 *chip8, uint16_t instruction) {}
+static inline void ins_sys_addr(Chip8 *chip8, uint16_t instruction) {
+#ifndef NDEBUG
+  printf("Uninmplemented Instruction: 0nnn\n");
+#endif
+}
 
 /*
 00E0 - CLS
@@ -138,7 +168,9 @@ Clear the display.
 */
 static inline void ins_cls(Chip8 *chip8) {
   memset(chip8->display, 0x0, sizeof(chip8->display));
+#ifndef NDEBUG
   chip8_print_display(chip8, '#', ' ');
+#endif
 }
 
 /*
@@ -448,10 +480,13 @@ static inline void ins_jp_v0_addr(Chip8 *chip8, uint16_t instruction) {
 Cxkk - RND Vx, byte
 Set Vx = random byte AND kk.
 
-The interpreter generates a random number from 0 to 255, which is then ANDed with the value kk. The results are stored in Vx. See instruction 8xy2 for more information on AND.
+The interpreter generates a random number from 0 to 255, which is then ANDed
+with the value kk. The results are stored in Vx. See instruction 8xy2 for more
+information on AND.
 */
 static inline void ins_rnd_vx_byte(Chip8 *chip8, uint16_t instruction) {
-  chip8->V[(instruction & 0x0F00) >> 8] = (uint8_t)rand() & (instruction & 0x00FF);
+  chip8->V[(instruction & 0x0F00) >> 8] =
+      (uint8_t)rand() & (instruction & 0x00FF);
 #ifndef NDEBUG
   chip8_print_registers(chip8, PRINT_V);
 #endif
@@ -472,7 +507,8 @@ and section 2.4, Display, for more information on the Chip-8 screen and sprites.
 */
 static inline void ins_drw_vx_vy(Chip8 *chip8, uint16_t instruction) {
   unsigned char x = chip8->V[(instruction & 0x0F00) >> 8] % CHIP8_DISPLAY_WIDTH;
-  unsigned char y = chip8->V[(instruction & 0x00F0) >> 4] % CHIP8_DISPLAY_HEIGHT;
+  unsigned char y =
+      chip8->V[(instruction & 0x00F0) >> 4] % CHIP8_DISPLAY_HEIGHT;
   // assert(x < CHIP8_DISPLAY_WIDTH);
   // assert(y < CHIP8_DISPLAY_HEIGHT);
   assert(chip8->I < CHIP8_MEM_SIZE);
@@ -507,10 +543,151 @@ static inline void ins_drw_vx_vy(Chip8 *chip8, uint16_t instruction) {
 Ex9E - SKP Vx
 Skip next instruction if key with the value of Vx is pressed.
 
-Checks the keyboard, and if the key corresponding to the value of Vx is currently in the down position, PC is increased by 2.
+Checks the keyboard, and if the key corresponding to the value of Vx is
+currently in the down position, PC is increased by 2.
 */
 static inline void ins_skp_vx(Chip8 *chip8, uint16_t instruction) {
-//TODO
+  if (chip8->keyboard.value & (0x1 << (chip8->V[(instruction & 0x0F00) >> 8])))
+    chip8->PC += 2;
+#ifndef NDEBUG
+  chip8_print_registers(chip8, PRINT_PC | PRINT_KEYS);
+#endif
+}
+
+/*
+Fx07 - LD Vx, DT
+Set Vx = delay timer value.
+
+The value of DT is placed into Vx.
+*/
+static inline void ins_ld_vx_dt(Chip8 *chip8, uint16_t instruction) {
+  chip8->V[(instruction & 0x0F00) >> 8] = chip8->DT;
+#ifndef NDEBUG
+  chip8_print_registers(chip8, PRINT_V | PRINT_DT);
+#endif
+}
+
+/*
+Fx0A - LD Vx, K
+Wait for a key press, store the value of the key in Vx.
+
+All execution stops until a key is pressed, then the value of that key is stored
+in Vx.
+*/
+static inline void ins_ld_vx_k(Chip8 *chip8, uint16_t instruction) {
+  // TODO
+#ifndef NDEBUG
+  chip8_print_registers(chip8, PRINT_V);
+#endif
+}
+
+/*
+Fx15 - LD DT, Vx
+Set delay timer = Vx.
+
+DT is set equal to the value of Vx.
+*/
+static inline void ins_ld_dt_vx(Chip8 *chip8, uint16_t instruction) {
+  chip8->DT = chip8->V[(instruction & 0x0F00) >> 8];
+#ifndef NDEBUG
+  chip8_print_registers(chip8, PRINT_V | PRINT_DT);
+#endif
+}
+
+/*
+Fx18 - LD ST, Vx
+Set sound timer = Vx.
+
+ST is set equal to the value of Vx.
+*/
+static inline void ins_ld_st_vx(Chip8 *chip8, uint16_t instruction) {
+  chip8->ST = chip8->V[(instruction & 0x0F00) >> 8];
+#ifndef NDEBUG
+  chip8_print_registers(chip8, PRINT_V | PRINT_ST);
+#endif
+}
+
+/*
+Fx1E - ADD I, Vx
+Set I = I + Vx.
+
+The values of I and Vx are added, and the results are stored in I.
+*/
+static inline void ins_add_i_vx(Chip8 *chip8, uint16_t instruction) {
+  chip8->I += chip8->V[(instruction & 0x0F00) >> 8];
+#ifndef NDEBUG
+  chip8_print_registers(chip8, PRINT_V | PRINT_I);
+#endif
+}
+
+/*
+Fx29 - LD F, Vx
+Set I = location of sprite for digit Vx.
+
+The value of I is set to the location for the hexadecimal sprite corresponding
+to the value of Vx. See section 2.4, Display, for more information on the Chip-8
+hexadecimal font.
+*/
+static inline void ins_ld_f_vx(Chip8 *chip8, uint16_t instruction) {
+  chip8->I = CHIP8_FONT_DATA_START + 5 * chip8->V[(instruction & 0x0F00) >> 8];
+#ifndef NDEBUG
+  chip8_print_registers(chip8, PRINT_V | PRINT_I);
+#endif
+}
+
+/*
+Fx33 - LD B, Vx
+Store BCD representation of Vx in memory locations I, I+1, and I+2.
+
+The interpreter takes the decimal value of Vx, and places the hundreds digit in
+memory at location in I, the tens digit at location I+1, and the ones digit at
+location I+2.
+*/
+static inline void ins_ld_b_vx(Chip8 *chip8, uint16_t instruction) {
+  assert(chip8->I + 2 < CHIP8_MEM_SIZE);
+  chip8->memory[chip8->I] = (chip8->V[(instruction & 0x0F00) >> 8] / 100) % 10;
+  chip8->memory[chip8->I + 1] =
+      (chip8->V[(instruction & 0x0F00) >> 8] / 10) % 10;
+  chip8->memory[chip8->I + 2] = chip8->V[(instruction & 0x0F00) >> 8] % 10;
+#ifndef NDEBUG
+  chip8_print_registers(chip8, PRINT_V | PRINT_I);
+#endif
+}
+
+/*
+Fx55 - LD [I], Vx
+Store registers V0 through Vx in memory starting at location I.
+
+The interpreter copies the values of registers V0 through Vx into memory,
+starting at the address in I.
+*/
+static inline void ins_ld_i_vx(Chip8 *chip8, uint16_t instruction) {
+  assert(chip8->I + ((instruction & 0x0F00) >> 8) < CHIP8_MEM_SIZE);
+  for (uint8_t i = 0; i <= ((instruction & 0x0F00) >> 8); i++) {
+    chip8->memory[chip8->I + i] = chip8->V[i];
+  }
+#ifndef NDEBUG
+  chip8_print_registers(chip8, PRINT_V | PRINT_I);
+  chip8_mem_hexdump(chip8, chip8->I, chip8->I + 16);
+#endif
+}
+
+/*
+Fx65 - LD Vx, [I]
+Read registers V0 through Vx from memory starting at location I.
+
+The interpreter reads values from memory starting at location I into registers
+V0 through Vx.
+*/
+static inline void ins_ld_vx_i(Chip8 *chip8, uint16_t instruction) {
+  assert(chip8->I + ((instruction & 0x0F00) >> 8) < CHIP8_MEM_SIZE);
+  for (uint8_t i = 0; i <= ((instruction & 0x0F00) >> 8); i++) {
+    chip8->V[i] = chip8->memory[chip8->I + i];
+  }
+#ifndef NDEBUG
+  chip8_print_registers(chip8, PRINT_V | PRINT_I);
+  chip8_mem_hexdump(chip8, chip8->I, chip8->I + 16);
+#endif
 }
 
 // Fetch and instruction and increase Program Counter by 2
@@ -552,11 +729,11 @@ static inline void chip8_decode_execute(Chip8 *chip8, uint16_t instruction) {
       break;
     case 0x5000:
       switch (instruction & 0x000F) {
-        case 0x0000:
-          ins_se_vx_vy(chip8, instruction);
-          break;
-        default:
-          printf("Unknown Instruction found: %04x\n", instruction);
+      case 0x0000:
+        ins_se_vx_vy(chip8, instruction);
+        break;
+      default:
+        printf("Unknown Instruction found: %04x\n", instruction);
       }
       break;
     case 0x6000:
@@ -567,6 +744,9 @@ static inline void chip8_decode_execute(Chip8 *chip8, uint16_t instruction) {
       break;
     case 0x8000:
       switch (instruction & 0x000F) {
+      case 0x0000:
+        ins_ld_vx_vy(chip8, instruction);
+        break;
       case 0x0001:
         ins_or_vx_vy(chip8, instruction);
         break;
@@ -597,10 +777,10 @@ static inline void chip8_decode_execute(Chip8 *chip8, uint16_t instruction) {
       break;
     case 0x9000:
       switch (instruction & 0x000F) {
-        case 0x0000:
-          ins_sne_vx_vy(chip8, instruction);  
-          break;
-        default:
+      case 0x0000:
+        ins_sne_vx_vy(chip8, instruction);
+        break;
+      default:
         printf("Unknown Instruction found: %04x\n", instruction);
       }
       break;
@@ -615,6 +795,48 @@ static inline void chip8_decode_execute(Chip8 *chip8, uint16_t instruction) {
       break;
     case 0xD000:
       ins_drw_vx_vy(chip8, instruction);
+      break;
+    case 0xE000:
+      switch (instruction & 0x00FF) {
+      case 0x00A1:
+        ins_skp_vx(chip8, instruction);
+        break;
+      default:
+        printf("Unknown Instruction found: %04x\n", instruction);
+      }
+      break;
+    case 0xF000:
+      switch (instruction & 0x00FF) {
+      case 0x0007:
+        ins_ld_vx_dt(chip8, instruction);
+        break;
+      case 0x000A:
+        ins_ld_vx_k(chip8, instruction);
+        break;
+      case 0x0015:
+        ins_ld_dt_vx(chip8, instruction);
+        break;
+      case 0x0018:
+        ins_ld_st_vx(chip8, instruction);
+        break;
+      case 0x001E:
+        ins_add_i_vx(chip8, instruction);
+        break;
+      case 0x0029:
+        ins_ld_f_vx(chip8, instruction);
+        break;
+      case 0x0033:
+        ins_ld_b_vx(chip8, instruction);
+        break;
+      case 0x0055:
+        ins_ld_i_vx(chip8, instruction);
+        break;
+      case 0x0065:
+        ins_ld_vx_i(chip8, instruction);
+        break;
+      default:
+        printf("Unknown Instruction found: %04x\n", instruction);
+      }
       break;
     default:
       printf("Unknown Instruction found: %04x\n", instruction);

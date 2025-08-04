@@ -18,6 +18,7 @@ portable to other projects maybe
 #define CHIP8_STACK_SIZE 16
 #define CHIP8_DISPLAY_WIDTH 64
 #define CHIP8_DISPLAY_HEIGHT 32
+#define CHIP8_FONT_DATA_START 0x50
 
 // I will imagine 'CHIP8' as if it were some sort of CPU (or kind of virtual cpu
 // since it's really an interpreter(?))
@@ -32,6 +33,27 @@ typedef struct {
   uint8_t ST;                       // Delay Timer register
   uint8_t memory[CHIP8_MEM_SIZE];   // 4K RAM
   uint8_t display[CHIP8_DISPLAY_HEIGHT][CHIP8_DISPLAY_WIDTH / 8];
+  union keyboard {
+    struct {
+      unsigned char key_0 : 1;
+      unsigned char key_1 : 1;
+      unsigned char key_2 : 1;
+      unsigned char key_3 : 1;
+      unsigned char key_4 : 1;
+      unsigned char key_5 : 1;
+      unsigned char key_6 : 1;
+      unsigned char key_7 : 1;
+      unsigned char key_8 : 1;
+      unsigned char key_9 : 1;
+      unsigned char key_a : 1;
+      unsigned char key_b : 1;
+      unsigned char key_c : 1;
+      unsigned char key_d : 1;
+      unsigned char key_e : 1;
+      unsigned char key_f : 1;
+    } keys;
+    uint16_t value;
+  } keyboard;
 } Chip8;
 
 // Initialize CHIP8 struct
@@ -48,6 +70,7 @@ void chip8_display_initialize(Chip8 *chip8);
 #define PRINT_V (1 << 4)
 #define PRINT_DT (1 << 5)
 #define PRINT_ST (1 << 6)
+#define PRINT_KEYS (1 << 7)
 
 // Print Registers
 void chip8_print_registers(Chip8 *chip8, int flags);
@@ -63,6 +86,9 @@ void chip8_step(Chip8 *chip8);
 
 // Load ROM into the memory starting at address 0x200
 void chip8_load_rom(Chip8 *chip8, const uint8_t *rom, uint16_t size);
+
+// Load ROM from a file into memory starting at address 0x200
+int chip8_load_rom_from_file(Chip8 *chip8, const char *filename);
 
 #ifdef __cplusplus
 }
