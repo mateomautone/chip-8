@@ -1,5 +1,4 @@
 #include <chip8.h>
-#include <ncurses.h>
 #include <stdio.h>
 
 int main(int argc, char const *argv[]) {

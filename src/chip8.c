@@ -43,7 +43,7 @@ void chip8_initialize(Chip8 *chip8) {
   chip8->I = 0x0000;
   chip8->DT = 0x00;
   chip8->ST = 0x00;
-  chip8->keyboard.value = 0x0000;
+  // chip8->keyboard.value = 0x0000;
   load_font(chip8);
   srand(time(NULL));
   memset(chip8->display, 0, sizeof(chip8->display));
@@ -79,7 +79,7 @@ void chip8_print_registers(Chip8 *chip8, int flags) {
   if (flags & PRINT_ST)
     printf("Sound Timer\t0x%02x\n", chip8->ST);
   if (flags & PRINT_KEYS) {
-    printf("Keyboard:\t0x%04x\n", chip8->keyboard.value);
+    // printf("Keyboard:\t0x%04x\n", chip8->keyboard.value);
   }
 }
 
@@ -509,20 +509,11 @@ static inline void ins_drw_vx_vy(Chip8 *chip8, uint16_t instruction) {
   unsigned char x = chip8->V[(instruction & 0x0F00) >> 8] % CHIP8_DISPLAY_WIDTH;
   unsigned char y =
       chip8->V[(instruction & 0x00F0) >> 4] % CHIP8_DISPLAY_HEIGHT;
-  // assert(x < CHIP8_DISPLAY_WIDTH);
-  // assert(y < CHIP8_DISPLAY_HEIGHT);
   assert(chip8->I < CHIP8_MEM_SIZE);
   assert(chip8->I + (instruction & 0x000F) < CHIP8_MEM_SIZE);
   unsigned char pixel_erased = 0;
   for (unsigned char i = 0; i < (instruction & 0x000F); i++) {
     uint8_t spritebyte = chip8->memory[chip8->I + i];
-    // chip8->V[0xF] =
-    //     (0xFF & ((spritebyte >> (x % 8) | chip8->display[y + i][x / 8]) ^
-    //              (spritebyte >> (x % 8) ^ chip8->display[y + i][x / 8]))) &&
-    //     (0xFF & ((spritebyte >> (8 - (x % 8)) | chip8->display[y + i][x / 8 +
-    //     1]) ^
-    //              (spritebyte >> (8 - (x % 8)) ^ chip8->display[y + i][x / 8 +
-    //              1])));
     pixel_erased |= chip8->display[(y + i) % CHIP8_DISPLAY_HEIGHT][x / 8] &
                         spritebyte >> (x % 8) &&
                     chip8->display[(y + i) % CHIP8_DISPLAY_HEIGHT]
@@ -536,7 +527,6 @@ static inline void ins_drw_vx_vy(Chip8 *chip8, uint16_t instruction) {
   }
   chip8->V[0xF] = pixel_erased;
   chip8_print_display(chip8, '#', ' ');
-  // chip8->display[chip8->V[y]][chip8->V[x]];
 }
 
 /*
@@ -547,8 +537,8 @@ Checks the keyboard, and if the key corresponding to the value of Vx is
 currently in the down position, PC is increased by 2.
 */
 static inline void ins_skp_vx(Chip8 *chip8, uint16_t instruction) {
-  if (chip8->keyboard.value & (0x1 << (chip8->V[(instruction & 0x0F00) >> 8])))
-    chip8->PC += 2;
+  // if (chip8->keyboard.value & (0x1 << (chip8->V[(instruction & 0x0F00) >> 8])))
+    // chip8->PC += 2;
 #ifndef NDEBUG
   chip8_print_registers(chip8, PRINT_PC | PRINT_KEYS);
 #endif

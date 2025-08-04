@@ -33,27 +33,6 @@ typedef struct {
   uint8_t ST;                       // Delay Timer register
   uint8_t memory[CHIP8_MEM_SIZE];   // 4K RAM
   uint8_t display[CHIP8_DISPLAY_HEIGHT][CHIP8_DISPLAY_WIDTH / 8];
-  union keyboard {
-    struct {
-      unsigned char key_0 : 1;
-      unsigned char key_1 : 1;
-      unsigned char key_2 : 1;
-      unsigned char key_3 : 1;
-      unsigned char key_4 : 1;
-      unsigned char key_5 : 1;
-      unsigned char key_6 : 1;
-      unsigned char key_7 : 1;
-      unsigned char key_8 : 1;
-      unsigned char key_9 : 1;
-      unsigned char key_a : 1;
-      unsigned char key_b : 1;
-      unsigned char key_c : 1;
-      unsigned char key_d : 1;
-      unsigned char key_e : 1;
-      unsigned char key_f : 1;
-    } keys;
-    uint16_t value;
-  } keyboard;
 } Chip8;
 
 // Initialize CHIP8 struct
