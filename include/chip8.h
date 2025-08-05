@@ -20,9 +20,16 @@ portable to other projects maybe
 #define CHIP8_DISPLAY_HEIGHT 32
 #define CHIP8_FONT_DATA_START 0x50
 
-// I will imagine 'CHIP8' as if it were some sort of CPU (or kind of virtual cpu
-// since it's really an interpreter(?))
+// Chip8 framebuffer (bit-packed version)
+typedef uint8_t chip8_display_t[CHIP8_DISPLAY_HEIGHT][CHIP8_DISPLAY_WIDTH / 8];
 
+// Chip8 external functions
+typedef struct {
+  uint8_t (*rand)();
+  void (*draw_display)(const chip8_display_t *display);
+} chip8_interface_t;
+
+// Chip8 Structure
 typedef struct {
   uint16_t PC;                      // Program Counter
   uint8_t SP;                       // Stack Pointer
@@ -31,15 +38,17 @@ typedef struct {
   uint16_t I;                       // I 16bit Register
   uint8_t DT;                       // Sound Timer Register
   uint8_t ST;                       // Delay Timer register
+  uint8_t keys[16];                 // Keys
   uint8_t memory[CHIP8_MEM_SIZE];   // 4K RAM
-  uint8_t display[CHIP8_DISPLAY_HEIGHT][CHIP8_DISPLAY_WIDTH / 8];
-} Chip8;
+  chip8_display_t display;
+  chip8_interface_t interface;
+} chip8_t;
 
 // Initialize CHIP8 struct
-void chip8_initialize(Chip8 *chip8);
+void chip8_initialize(chip8_t *chip8, const chip8_interface_t chip8_interface);
 
 // Initialize the display I guess
-void chip8_display_initialize(Chip8 *chip8);
+void chip8_display_initialize(chip8_t *chip8);
 
 // Print flags
 #define PRINT_PC (1 << 0)
@@ -52,22 +61,22 @@ void chip8_display_initialize(Chip8 *chip8);
 #define PRINT_KEYS (1 << 7)
 
 // Print Registers
-void chip8_print_registers(Chip8 *chip8, int flags);
+void chip8_print_registers(chip8_t *chip8, int flags);
 
 // Print Display
-void chip8_print_display(Chip8 *chip8, char on_char, char off_char);
+void chip8_print_display(chip8_t *chip8, char on_char, char off_char);
 
 // Hexdump memory region
-void chip8_mem_hexdump(Chip8 *chip8, uint16_t start_addr, uint16_t end_addr);
+void chip8_mem_hexdump(chip8_t *chip8, uint16_t start_addr, uint16_t end_addr);
 
 // Execute an instruction
-void chip8_step(Chip8 *chip8);
+void chip8_step(chip8_t *chip8);
 
 // Load ROM into the memory starting at address 0x200
-void chip8_load_rom(Chip8 *chip8, const uint8_t *rom, uint16_t size);
+void chip8_load_rom(chip8_t *chip8, const uint8_t *rom, uint16_t size);
 
 // Load ROM from a file into memory starting at address 0x200
-int chip8_load_rom_from_file(Chip8 *chip8, const char *filename);
+int chip8_load_rom_from_file(chip8_t *chip8, const char *filename);
 
 #ifdef __cplusplus
 }

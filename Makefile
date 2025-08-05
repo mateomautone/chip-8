@@ -1,5 +1,5 @@
 CC=gcc
-CFLAGS=-g -Wall -I $(INCLUDEDIR)
+CFLAGS=-g -Wall -Werror -Wno-error=unused-variable -I $(INCLUDEDIR)
 # SRCFILES=src/chip8.c src/main.c
 INCLUDEDIR=include
 SRCDIR=src
@@ -11,7 +11,7 @@ BIN=$(BINDIR)/ch8run
 
 all: $(BIN)
 
-release: CFLAGS=-Wall -O2 -DNDEBUG -g -I $(INCLUDEDIR)
+release: CFLAGS=-Wall -O2 -DNDEBUG -I $(INCLUDEDIR)
 release: clean
 release: $(BIN)
 
