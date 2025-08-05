@@ -22,7 +22,7 @@ int main(int argc, char const *argv[]) {
   }
 
   // chip8_load_rom(&chip8, (uint8_t[]){0xC1,0x99}, 2);
-  for (long i = 0; i < 1; i++) {
+  for (long i = 0; i < 1100; i++) {
     chip8_step(&chip8);
   }
 

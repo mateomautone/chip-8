@@ -380,10 +380,11 @@ The values of Vx and Vy are added together. If the result is greater than 8 bits
 are kept, and stored in Vx.
 */
 static inline void ins_add_vx_vy(chip8_t *chip8, uint16_t instruction) {
-  chip8->V[0xF] = chip8->V[(instruction & 0x0F00) >> 8] >
-                  UINT8_MAX - chip8->V[(instruction & 0x00F0) >> 4];
+  uint8_t set_vf = chip8->V[(instruction & 0x0F00) >> 8] >
+                  UINT8_MAX - chip8->V[(instruction & 0x00F0) >> 4] ? 1 : 0;
   chip8->V[(instruction & 0x0F00) >> 8] +=
       chip8->V[(instruction & 0x00F0) >> 4];
+  chip8->V[0xF] = set_vf;
 #ifndef NDEBUG
   chip8_print_registers(chip8, PRINT_V);
 #endif
@@ -397,10 +398,11 @@ If Vx > Vy, then VF is set to 1, otherwise 0. Then Vy is subtracted from Vx, and
 the results stored in Vx.
 */
 static inline void ins_sub_vx_vy(chip8_t *chip8, uint16_t instruction) {
-  chip8->V[0xF] = chip8->V[(instruction & 0x0F00) >> 8] >
-                  chip8->V[(instruction & 0x00F0) >> 4];
+  uint8_t set_vf = chip8->V[(instruction & 0x0F00) >> 8] >
+                  chip8->V[(instruction & 0x00F0) >> 4] ? 1 : 0;
   chip8->V[(instruction & 0x0F00) >> 8] -=
       chip8->V[(instruction & 0x00F0) >> 4];
+  chip8->V[0xF] = set_vf;
 #ifndef NDEBUG
   chip8_print_registers(chip8, PRINT_V);
 #endif
@@ -414,8 +416,9 @@ If the least-significant bit of Vx is 1, then VF is set to 1, otherwise 0. Then
 Vx is divided by 2.
 */
 static inline void ins_shr_vx(chip8_t *chip8, uint16_t instruction) {
-  chip8->V[0xF] = chip8->V[(instruction & 0x0F00) >> 8] & 0x1;
+  uint8_t set_vf = chip8->V[(instruction & 0x0F00) >> 8] & 0x1;
   chip8->V[(instruction & 0x0F00) >> 8] >>= 1;
+  chip8->V[0xF] = set_vf;
 #ifndef NDEBUG
   chip8_print_registers(chip8, PRINT_V);
 #endif
@@ -429,11 +432,12 @@ If Vy > Vx, then VF is set to 1, otherwise 0. Then Vx is subtracted from Vy, and
 the results stored in Vx.
 */
 static inline void ins_subn_vx_vy(chip8_t *chip8, uint16_t instruction) {
-  chip8->V[0xF] = chip8->V[(instruction & 0x00F0) >> 4] >
-                  chip8->V[(instruction & 0x0F00) >> 8];
+  uint8_t set_vf = chip8->V[(instruction & 0x00F0) >> 4] >
+                  chip8->V[(instruction & 0x0F00) >> 8] ? 1 : 0;
   chip8->V[(instruction & 0x0F00) >> 8] =
       chip8->V[(instruction & 0x00F0) >> 4] -
       chip8->V[(instruction & 0x0F00) >> 8];
+  chip8->V[0xF] = set_vf;
 #ifndef NDEBUG
   chip8_print_registers(chip8, PRINT_V);
 #endif
@@ -447,8 +451,9 @@ If the most-significant bit of Vx is 1, then VF is set to 1, otherwise to 0.
 Then Vx is multiplied by 2.
 */
 static inline void ins_shl_vx(chip8_t *chip8, uint16_t instruction) {
-  chip8->V[0xF] = (chip8->V[(instruction & 0x0F00) >> 8] >> 7) & 0x1;
+  uint8_t set_vf = (chip8->V[(instruction & 0x0F00) >> 8] >> 7) & 0x1;
   chip8->V[(instruction & 0x0F00) >> 8] <<= 1;
+  chip8->V[0xF] = set_vf;
 #ifndef NDEBUG
   chip8_print_registers(chip8, PRINT_V);
 #endif
