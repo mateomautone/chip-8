@@ -158,6 +158,17 @@ void chip8_reset_key(chip8_t *chip8, uint8_t key) {
 #endif
 }
 
+// Tick ST and DT
+void chip8_timer_tick(chip8_t *chip8) {
+  if (chip8->DT)
+    chip8->DT--;
+  if (chip8->ST)
+    chip8->ST--;
+#ifndef NDEBUG
+  chip8_print_registers(chip8, PRINT_DT | PRINT_ST);
+#endif
+}
+
 
 /*
 Instruction Reference: http://devernay.free.fr/hacks/chip8/C8TECH10.HTM
@@ -190,6 +201,8 @@ static inline void ins_cls(chip8_t *chip8) {
   memset(chip8->display, 0x0, sizeof(chip8->display));
   if (chip8->interface.draw_display)
     chip8->interface.draw_display((const chip8_display_t *)&chip8->display, chip8->interface.user_data);
+  else
+   chip8->interface.display_update_flag = 1;
 #ifndef NDEBUG
   if (!chip8->interface.draw_display)
     chip8_print_display(chip8, '#', ' ');
@@ -565,6 +578,8 @@ static inline void ins_drw_vx_vy(chip8_t *chip8, uint16_t instruction) {
   chip8->V[0xF] = pixel_erased;
   if (chip8->interface.draw_display)
     chip8->interface.draw_display((const chip8_display_t *)&chip8->display, chip8->interface.user_data);
+  else
+   chip8->interface.display_update_flag = 1;
   #ifndef NDEBUG
   if (!chip8->interface.draw_display)
     chip8_print_display(chip8, '#', ' ');
@@ -579,7 +594,23 @@ Checks the keyboard, and if the key corresponding to the value of Vx is
 currently in the down position, PC is increased by 2.
 */
 static inline void ins_skp_vx(chip8_t *chip8, uint16_t instruction) {
-  if (chip8->keys[chip8->V[(instruction & 0x0F00) >> 8]])
+  assert(((instruction & 0x0F00) >> 8) < 16);
+  if (chip8->keys[chip8->V[(instruction & 0x0F00) >> 8] % 16])
+    chip8->PC += 2;
+#ifndef NDEBUG
+  chip8_print_registers(chip8, PRINT_PC | PRINT_KEYS);
+#endif
+}
+
+/*
+ExA1 - SKNP Vx
+Skip next instruction if key with the value of Vx is not pressed.
+
+Checks the keyboard, and if the key corresponding to the value of Vx is currently in the up position, PC is increased by 2.
+*/
+static inline void ins_sknp_vx(chip8_t *chip8, uint16_t instruction) {
+  assert(((instruction & 0x0F00) >> 8) < 16);
+  if (!chip8->keys[chip8->V[(instruction & 0x0F00) >> 8] % 16])
     chip8->PC += 2;
 #ifndef NDEBUG
   chip8_print_registers(chip8, PRINT_PC | PRINT_KEYS);
@@ -836,8 +867,11 @@ static inline void chip8_decode_execute(chip8_t *chip8, uint16_t instruction) {
       break;
     case 0xE000:
       switch (instruction & 0x00FF) {
-      case 0x00A1:
+      case 0x009E:
         ins_skp_vx(chip8, instruction);
+        break;
+      case 0x00A1:
+        ins_sknp_vx(chip8, instruction);
         break;
       default:
         printf("Unknown Instruction found: %04x\n", instruction);

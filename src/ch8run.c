@@ -12,7 +12,7 @@ int main(int argc, char *argv[]) {
   // Some variables
   typedef enum { NONE, SDL } Backend;
   Backend backend = SDL;
-  int target_cycles = 700;
+  int cycles_per_frame = 20;
   int render_scale = 16;
 
   // Parse options
@@ -37,7 +37,7 @@ int main(int argc, char *argv[]) {
       // chip8_step(&chip8);
       // }
       // return 0;
-      if (!(target_cycles = atoi(optarg))) {
+      if (!(cycles_per_frame = atoi(optarg))) {
         print_usage();
         return 1;
       }
@@ -78,7 +78,9 @@ int main(int argc, char *argv[]) {
   srand((unsigned int)time(NULL)); // Seeding random number generator
   chip8_interface_t chip8_interface = {.rand = uint8_rand};
   if (backend == SDL) {
+#ifdef CHIP8_USE_DRAWCALLBACK
     chip8_interface.draw_display = chip8_sdl_draw_display;
+#endif /* ifdef CHIP8_USE_DRAWCALLBACK */
     chip8_interface.user_data = &chip8_sdl;
   }
 
@@ -91,7 +93,7 @@ int main(int argc, char *argv[]) {
 
   // Enter SDL Loop
   if (backend == SDL) {
-    chip8_sdl_run(&chip8, &chip8_sdl, target_cycles);
+    chip8_sdl_run(&chip8, &chip8_sdl, cycles_per_frame);
   }
 
   // Clean up stuff
@@ -105,7 +107,7 @@ void print_usage(void) {
   printf("Usage: ch8run [OPTION]... [ROMFILE]\n\n");
   printf("Options:\n");
   printf("  -h\tdisplay this help\n");
-  printf("  -c\tnumber of cycles per second (Default: 700)\n");
+  printf("  -c\tnumber of cycles per frame (Default: 20)\n");
   printf("  -b\tchoose backend (none, SDL, ncurses) (Default: SDL)\n");
   printf("\n");
 }

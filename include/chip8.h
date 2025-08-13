@@ -27,6 +27,7 @@ typedef uint8_t chip8_display_t[CHIP8_DISPLAY_HEIGHT][CHIP8_DISPLAY_WIDTH / 8];
 typedef struct {
   uint8_t (*rand)(void);
   void (*draw_display)(const chip8_display_t *display, void *user_data);
+  uint8_t display_update_flag; // Alternative to the callback, will just get set when necessary
   void *user_data; // So, this void pointer allows the backend to store stuff
 } chip8_interface_t;
 
@@ -81,6 +82,9 @@ void chip8_set_key(chip8_t *chip8, uint8_t key);
 
 // Reset key
 void chip8_reset_key(chip8_t *chip8, uint8_t key);
+
+// Tick Timers
+void chip8_timer_tick(chip8_t *chip8);
 
 #ifdef __cplusplus
 }

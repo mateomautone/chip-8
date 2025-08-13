@@ -145,6 +145,8 @@ static inline uint8_t sdl_key_to_chip8_key(SDL_Keycode key) {
   }
 }
 
+// Basic loop implementation
+// TODO: Improve timings and stuf
 void chip8_sdl_run(chip8_t *chip8, chip8_sdl_t *chip8_sdl,
                    int cycles_per_frame) {
   SDL_Event event;
@@ -166,11 +168,20 @@ void chip8_sdl_run(chip8_t *chip8, chip8_sdl_t *chip8_sdl,
         if (event.window.event == SDL_WINDOWEVENT_EXPOSED ||
             event.window.event == SDL_WINDOWEVENT_RESTORED) {
           // Redraw when it gets minimized and stuff
-          chip8_sdl_draw_display((const chip8_display_t*)&chip8->display, chip8_sdl);
+          chip8_sdl_draw_display((const chip8_display_t *)&chip8->display,
+                                 chip8_sdl);
         }
       }
     }
-    chip8_step(chip8);
+#ifndef CHIP8_USE_DRAWCALLBACK
+    if (chip8->interface.display_update_flag)
+      chip8_sdl_draw_display((const chip8_display_t *)&chip8->display, chip8_sdl);
+#endif /* ifdef CHIP8_USE_DRAWCALLBACK */
+    for (int i = 0; i < cycles_per_frame; i++) {
+      chip8_step(chip8);
+    }
+    chip8_timer_tick(chip8);
     SDL_Delay(16);
   }
 }
+
