@@ -76,6 +76,12 @@ void chip8_load_rom(chip8_t *chip8, const uint8_t *rom, uint16_t size);
 // Load ROM from a file into memory starting at address 0x200
 int chip8_load_rom_from_file(chip8_t *chip8, const char *filename);
 
+// Set key
+void chip8_set_key(chip8_t *chip8, uint8_t key);
+
+// Reset key
+void chip8_reset_key(chip8_t *chip8, uint8_t key);
+
 #ifdef __cplusplus
 }
 #endif

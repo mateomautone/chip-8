@@ -65,7 +65,7 @@ int main(int argc, char *argv[]) {
   chip8_sdl_t chip8_sdl;
   if (backend == SDL) {
     if (chip8_sdl_initialize(
-            &chip8_sdl, argv[0], render_scale,
+            &chip8_sdl, argv[argc - 1], render_scale,
             (SDL_Color){.a = 255, .r = 0x68, .g = 0x0E, .b = 0x0D},
             (SDL_Color){.a = 255, .r = 0xFF, .g = 0x6E, .b = 0x28}))
       return 1;
@@ -89,12 +89,10 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
-  // Test run a few cycles
-  for (int i = 0; i < 1000; i++) {
-    chip8_step(&chip8);
-    // sleep(1);
+  // Enter SDL Loop
+  if (backend == SDL) {
+    chip8_sdl_run(&chip8, &chip8_sdl, target_cycles);
   }
-  SDL_Delay(2000);
 
   // Clean up stuff
   if (backend == SDL) {

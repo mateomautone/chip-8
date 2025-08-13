@@ -140,6 +140,25 @@ int chip8_load_rom_from_file(chip8_t *chip8, const char *filename) {
   return 0;
 }
 
+// Set key
+void chip8_set_key(chip8_t *chip8, uint8_t key) {
+  assert(key < 16);
+  chip8->keys[key] = 1;
+#ifndef NDEBUG
+  chip8_print_registers(chip8, PRINT_KEYS);
+#endif
+}
+
+// Reset key
+void chip8_reset_key(chip8_t *chip8, uint8_t key) {
+  assert(key < 16);
+  chip8->keys[key] = 0;
+#ifndef NDEBUG
+  chip8_print_registers(chip8, PRINT_KEYS);
+#endif
+}
+
+
 /*
 Instruction Reference: http://devernay.free.fr/hacks/chip8/C8TECH10.HTM
 
@@ -386,8 +405,8 @@ If Vx > Vy, then VF is set to 1, otherwise 0. Then Vy is subtracted from Vx, and
 the results stored in Vx.
 */
 static inline void ins_sub_vx_vy(chip8_t *chip8, uint16_t instruction) {
-  uint8_t set_vf = chip8->V[(instruction & 0x0F00) >> 8] >
-                  chip8->V[(instruction & 0x00F0) >> 4] ? 1 : 0;
+  uint8_t set_vf = chip8->V[(instruction & 0x0F00) >> 8] >=
+                  chip8->V[(instruction & 0x00F0) >> 4];
   chip8->V[(instruction & 0x0F00) >> 8] -=
       chip8->V[(instruction & 0x00F0) >> 4];
   chip8->V[0xF] = set_vf;
@@ -420,8 +439,8 @@ If Vy > Vx, then VF is set to 1, otherwise 0. Then Vx is subtracted from Vy, and
 the results stored in Vx.
 */
 static inline void ins_subn_vx_vy(chip8_t *chip8, uint16_t instruction) {
-  uint8_t set_vf = chip8->V[(instruction & 0x00F0) >> 4] >
-                  chip8->V[(instruction & 0x0F00) >> 8] ? 1 : 0;
+  uint8_t set_vf = chip8->V[(instruction & 0x00F0) >> 4] >=
+                  chip8->V[(instruction & 0x0F00) >> 8];
   chip8->V[(instruction & 0x0F00) >> 8] =
       chip8->V[(instruction & 0x00F0) >> 4] -
       chip8->V[(instruction & 0x0F00) >> 8];
@@ -588,7 +607,13 @@ All execution stops until a key is pressed, then the value of that key is stored
 in Vx.
 */
 static inline void ins_ld_vx_k(chip8_t *chip8, uint16_t instruction) {
-  // TODO
+  for (uint8_t i = 0; i < 16; i++) {
+    if (chip8->keys[i]) {
+      chip8->V[(instruction & 0x0F00) >> 8] = i;
+      return;
+    }
+  }
+  chip8->PC -= 2;
 #ifndef NDEBUG
   chip8_print_registers(chip8, PRINT_V);
 #endif

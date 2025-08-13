@@ -38,9 +38,6 @@ $(OBJDIR)/%.o: $(SRCDIR)/%.c
 	mkdir -p $(@D)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-bear:
-	bear -- make
-
 clean:
 	$(RM) $(BIN) $(OBJS) $(OBJS:.o=.d)
 
