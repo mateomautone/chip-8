@@ -1,13 +1,10 @@
 #include <assert.h>
 #include <chip8.h>
+#include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
-
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 // Load font data (050-09F apparent convention)
 static inline void load_font(chip8_t *chip8) {
@@ -37,28 +34,18 @@ static inline void load_font(chip8_t *chip8) {
 
 // Initialize the CHIP8 values
 void chip8_initialize(chip8_t *chip8, const chip8_interface_t chip8_interface) {
-  // *chip8 = (Chip8){0};
-  // Initializing Registers
-  memset(chip8->V, 0x00, sizeof(chip8->V));
-  chip8->PC = 0x200;
-  chip8->SP = 0x00;
-  chip8->I = 0x0000;
-  chip8->DT = 0x00;
-  chip8->ST = 0x00;
-  // Initializing Key States
-  memset(chip8->keys, 0x00, sizeof(chip8->keys));
+  // Set everything to zero
+  memset(chip8, 0, sizeof(*chip8));
   // Initializing interface
   chip8->interface = chip8_interface;
   if (!chip8->interface.rand)
     chip8->interface.rand = NULL;
   if (!chip8->interface.draw_display)
     chip8->interface.draw_display = NULL;
-  // Initializing stack and memory
-  memset(chip8->stack, 0x00, sizeof(chip8->stack));
-  memset(chip8->memory, 0x00, sizeof(chip8->memory));
+  // Setting PC
+  chip8->PC = 0x200;
+  // Loading Font
   load_font(chip8);
-  // Initializing display
-  memset(chip8->display, 0, sizeof(chip8->display));
 }
 
 // Display Initialization
@@ -141,7 +128,7 @@ int chip8_load_rom_from_file(chip8_t *chip8, const char *filename) {
     return -1;
   }
   fseek(fd, 0, SEEK_END);
-  int filesize = ftell(fd);
+  size_t filesize = (size_t)ftell(fd);
   rewind(fd);
   if (filesize > CHIP8_MEM_SIZE) {
     printf("ROM is too big!\n");
@@ -183,9 +170,10 @@ Clear the display.
 static inline void ins_cls(chip8_t *chip8) {
   memset(chip8->display, 0x0, sizeof(chip8->display));
   if (chip8->interface.draw_display)
-    chip8->interface.draw_display(&chip8->display);
+    chip8->interface.draw_display((const chip8_display_t *)&chip8->display, chip8->interface.user_data);
 #ifndef NDEBUG
-  chip8_print_display(chip8, '#', ' ');
+  if (!chip8->interface.draw_display)
+    chip8_print_display(chip8, '#', ' ');
 #endif
 }
 
@@ -290,7 +278,7 @@ Set Vx = kk.
 The interpreter puts the value kk into register Vx.
 */
 static inline void ins_ld_vx_byte(chip8_t *chip8, uint16_t instruction) {
-  chip8->V[(instruction & 0x0F00) >> 8] = instruction & 0x00FF;
+  chip8->V[(instruction & 0x0F00) >> 8] = (uint8_t)(instruction & 0x00FF);
 #ifndef NDEBUG
   chip8_print_registers(chip8, PRINT_V);
 #endif
@@ -303,7 +291,7 @@ Set Vx = Vx + kk.
 Adds the value kk to the value of register Vx, then stores the result in Vx.
 */
 static inline void ins_add_vx_byte(chip8_t *chip8, uint16_t instruction) {
-  chip8->V[(instruction & 0x0F00) >> 8] += instruction & 0x00FF;
+  chip8->V[(instruction & 0x0F00) >> 8] += (uint8_t)(instruction & 0x00FF);
 #ifndef NDEBUG
   chip8_print_registers(chip8, PRINT_V);
 #endif
@@ -512,7 +500,7 @@ information on AND.
 static inline void ins_rnd_vx_byte(chip8_t *chip8, uint16_t instruction) {
   if (chip8->interface.rand) {
     chip8->V[(instruction & 0x0F00) >> 8] =
-        chip8->interface.rand() & (instruction & 0x00FF);
+        chip8->interface.rand() & (uint8_t)(instruction & 0x00FF);
   } else {
     chip8->V[(instruction & 0x0F00) >> 8] =
         0x77 & (instruction & 0x00FF); // A totally random number
@@ -557,9 +545,10 @@ static inline void ins_drw_vx_vy(chip8_t *chip8, uint16_t instruction) {
   }
   chip8->V[0xF] = pixel_erased;
   if (chip8->interface.draw_display)
-    chip8->interface.draw_display(&chip8->display);
+    chip8->interface.draw_display((const chip8_display_t *)&chip8->display, chip8->interface.user_data);
   #ifndef NDEBUG
-  chip8_print_display(chip8, '#', ' ');
+  if (!chip8->interface.draw_display)
+    chip8_print_display(chip8, '#', ' ');
   #endif
 }
 
@@ -653,7 +642,7 @@ to the value of Vx. See section 2.4, Display, for more information on the Chip-8
 hexadecimal font.
 */
 static inline void ins_ld_f_vx(chip8_t *chip8, uint16_t instruction) {
-  chip8->I = CHIP8_FONT_DATA_START + 5 * chip8->V[(instruction & 0x0F00) >> 8];
+  chip8->I = (uint16_t)(CHIP8_FONT_DATA_START + 5 * chip8->V[(instruction & 0x0F00) >> 8]);
 #ifndef NDEBUG
   chip8_print_registers(chip8, PRINT_V | PRINT_I);
 #endif
@@ -717,7 +706,7 @@ static inline void ins_ld_vx_i(chip8_t *chip8, uint16_t instruction) {
 // Fetch and instruction and increase Program Counter by 2
 static inline uint16_t chip8_fetch(chip8_t *chip8) {
   uint16_t instruction =
-      (chip8->memory[chip8->PC] << 8) + chip8->memory[chip8->PC + 1];
+      (uint16_t)((chip8->memory[chip8->PC] << 8) + chip8->memory[chip8->PC + 1]);
   chip8->PC += 2;
 #ifndef NDEBUG
   printf("Fetching Instruction: %04x\n", instruction);
@@ -873,6 +862,3 @@ void chip8_step(chip8_t *chip8) {
   chip8_decode_execute(chip8, chip8_fetch(chip8));
 }
 
-#ifdef __cplusplus
-}
-#endif

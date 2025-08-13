@@ -1,5 +1,5 @@
-#ifndef CHIP_8
-#define CHIP_8
+#ifndef CHIP8
+#define CHIP8
 
 #ifdef __cplusplus
 extern "C" {
@@ -25,8 +25,9 @@ typedef uint8_t chip8_display_t[CHIP8_DISPLAY_HEIGHT][CHIP8_DISPLAY_WIDTH / 8];
 
 // Chip8 external functions
 typedef struct {
-  uint8_t (*rand)();
-  void (*draw_display)(const chip8_display_t *display);
+  uint8_t (*rand)(void);
+  void (*draw_display)(const chip8_display_t *display, void *user_data);
+  void *user_data; // So, this void pointer allows the backend to store stuff
 } chip8_interface_t;
 
 // Chip8 Structure
@@ -46,9 +47,6 @@ typedef struct {
 
 // Initialize CHIP8 struct
 void chip8_initialize(chip8_t *chip8, const chip8_interface_t chip8_interface);
-
-// Initialize the display I guess
-void chip8_display_initialize(chip8_t *chip8);
 
 // Print flags
 #define PRINT_PC (1 << 0)
@@ -82,4 +80,4 @@ int chip8_load_rom_from_file(chip8_t *chip8, const char *filename);
 }
 #endif
 
-#endif // CHIP_8
+#endif // CHIP8
