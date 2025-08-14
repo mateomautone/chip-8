@@ -26,6 +26,12 @@ CFLAGS_COMMON += -Wpedantic
 CFLAGS_COMMON += -Wsign-conversion
 # Warn if float is promoted to double
 CFLAGS_COMMON += -Wdouble-promotion
+# Warn on signed vs unsigned comparisons
+CFLAGS_COMMON += -Wsign-compare
+# Warn on float equality comparisons
+CFLAGS_COMMON += -Wfloat-equal
+# Warn on potential use of uninitialized variables
+CFLAGS_COMMON += -Wuninitialized
 # Warn on undefined macros
 CFLAGS_COMMON += -Wundef
 # Warn if variable shadows another
@@ -36,10 +42,8 @@ CFLAGS_COMMON += -Wpointer-arith
 CFLAGS_COMMON += -Wcast-align
 # Warn on variable-length arrays
 CFLAGS_COMMON += -Wvla
-# Treat VLA use as an error
-CFLAGS_COMMON += -Werror=vla
 # Warn about unused parameters
-CFLAGS_COMMON += -Wunused-parameter
+# CFLAGS_COMMON += -Wunused-parameter
 # Warn about unused variables
 CFLAGS_COMMON += -Wunused-variable
 # Require prototypes in function declarations
@@ -68,6 +72,24 @@ CFLAGS_COMMON += -Wjump-misses-init
 CFLAGS_COMMON += -I $(INCLUDEDIR) $(shell sdl2-config --cflags)
 # Automatic dependency generation
 CFLAGS_COMMON += -MMD -MP
+# Warn when returning structs/unions by value
+CFLAGS_COMMON += -Waggregate-return
+# Warn if a function pointer is cast to an incompatible type
+CFLAGS_COMMON += -Wbad-function-cast
+# Warn if a global function is defined without a prior declaration
+CFLAGS_COMMON += -Wmissing-declarations
+# Warn if an -I include directory does not exist
+CFLAGS_COMMON += -Wmissing-include-dirs
+# Warn if a global function is defined without a previous prototype
+CFLAGS_COMMON += -Wmissing-prototypes
+# Warn if extern is declared inside a function
+CFLAGS_COMMON += -Wnested-externs
+# Warn when the same declaration appears multiple times
+CFLAGS_COMMON += -Wredundant-decls
+# Warn about expressions with undefined behavior due to sequence points
+CFLAGS_COMMON += -Wsequence-point
+# Warn when comparisons are always true/false because of type limits
+CFLAGS_COMMON += -Wtype-limits
 
 # Get SDL required linker flags
 LDFLAGS = $(shell sdl2-config --libs)
