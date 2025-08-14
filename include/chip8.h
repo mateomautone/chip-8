@@ -21,7 +21,10 @@ portable to other projects maybe
 #define CHIP8_FONT_DATA_START 0x50u
 
 // Use callback draw function
-#define CHIP8_USE_DRAW_CALLBACK
+// #define CHIP8_USE_DRAW_CALLBACK
+
+// Release detection for FX0A
+#define CHIP8_FX0A_RELEASE
 
 // If defined, 8xy1, 8xy2, and 8xy3 reset VF to 0 before/after the operation
 // #ifndef CHIP8_VF_RESET
@@ -83,10 +86,13 @@ typedef struct {
   uint16_t I;                       // I 16bit Register
   uint8_t DT;                       // Sound Timer Register
   uint8_t ST;                       // Delay Timer register
-  uint8_t keys[16];                 // Keys
   uint8_t memory[CHIP8_MEM_SIZE];   // 4K RAM
   chip8_display_t display;
   chip8_interface_t interface;
+  uint8_t keys[16];                 // Keys
+#ifdef CHIP8_FX0A_RELEASE
+  uint8_t previous_keys[16];        // Keys that were pressed before for CHIP8_FX0A_RELEASE
+#endif // CHIP8_FX0A_RELEASE
 } chip8_t;
 
 // Initialize CHIP8 struct
@@ -125,6 +131,11 @@ void chip8_set_key(chip8_t *chip8, uint8_t key);
 
 // Reset key
 void chip8_reset_key(chip8_t *chip8, uint8_t key);
+
+// Save previous keys state
+#ifdef CHIP8_FX0A_RELEASE
+void chip8_save_key(chip8_t *chip8);
+#endif // CHIP8_FX0A_RELEASE
 
 // Tick Timers
 void chip8_timer_tick(chip8_t *chip8);

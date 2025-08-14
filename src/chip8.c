@@ -464,10 +464,14 @@ static inline void ins_drw_vx_vy(chip8_t *chip8, uint16_t instruction) {
     uint8_t sprite_row_first = sprite_row >> (xpos % 8u);
     uint8_t sprite_row_second = sprite_row << (8u - (xpos % 8u));
     if (ypos + row < CHIP8_DISPLAY_HEIGHT) { // It will CLIP on the bottom
-      set_vf |= (chip8->display[ypos + row][xpos / 8u] & sprite_row_first) ? 1 : 0;
+      set_vf |=
+          (chip8->display[ypos + row][xpos / 8u] & sprite_row_first) ? 1 : 0;
       chip8->display[ypos + row][xpos / 8u] ^= sprite_row_first;
       if ((xpos / 8u + 1u) < 8u) { // It will CLIP on right
-        set_vf |= (chip8->display[ypos + row][xpos / 8u + 1u] & sprite_row_second) ? 1 : 0;
+        set_vf |=
+            (chip8->display[ypos + row][xpos / 8u + 1u] & sprite_row_second)
+                ? 1
+                : 0;
         chip8->display[ypos + row][xpos / 8u + 1u] ^= sprite_row_second;
       }
     }
@@ -560,14 +564,27 @@ static inline void ins_ld_vx_dt(chip8_t *chip8, uint16_t instruction) {
 #endif
 }
 
+#ifdef CHIP8_FX0A_RELEASE
+void chip8_save_key(chip8_t *chip8) {
+  memcpy(chip8->previous_keys, chip8->keys, sizeof(chip8->keys));
+}
+#endif /* ifdef CHIP8_FX0A_RELEASE */
+
 // Fx0A - LD Vx, K
 static inline void ins_ld_vx_k(chip8_t *chip8, uint16_t instruction) {
   uint8_t x = (instruction & 0x0F00) >> 8;
   for (uint8_t i = 0; i < 16; i++) {
+#ifdef CHIP8_FX0A_RELEASE
+    if (!chip8->keys[i] && chip8->previous_keys[i]) {
+      chip8->V[x] = i;
+      return;
+    }
+#else
     if (chip8->keys[i]) {
       chip8->V[x] = i;
       return;
     }
+#endif /* ifdef CHIP8_FX0A_RELEASE */
   }
   chip8->PC -= 2;
 #ifndef NDEBUG

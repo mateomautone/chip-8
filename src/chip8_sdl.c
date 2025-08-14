@@ -175,6 +175,9 @@ void chip8_sdl_run(chip8_t *chip8, chip8_sdl_t *chip8_sdl,
         }
       }
     }
+    for (uint32_t i = 0; i < cycles_per_frame; i++) {
+      chip8_step(chip8);
+    }
 #ifndef CHIP8_USE_DRAW_CALLBACK
     if (chip8->interface.display_update_flag)
       chip8_sdl_draw_display((const chip8_display_t *)&chip8->display, chip8_sdl);
@@ -182,9 +185,9 @@ void chip8_sdl_run(chip8_t *chip8, chip8_sdl_t *chip8_sdl,
 #ifdef CHIP8_WAIT_VBLANK
     chip8->interface.vblank_ready = 1;
 #endif /* ifdef CHIP8_WAIT_VBLANK */
-    for (uint32_t i = 0; i < cycles_per_frame; i++) {
-      chip8_step(chip8);
-    }
+#ifdef CHIP8_FX0A_RELEASE
+    chip8_save_key(chip8);
+#endif /* ifdef CHIP8_FX0A_RELEASE */
     chip8_timer_tick(chip8);
     Uint32 end_ticks = SDL_GetTicks();
     SDL_Delay((1000 / target_fps) - (start_ticks - end_ticks));
