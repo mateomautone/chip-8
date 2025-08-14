@@ -36,9 +36,9 @@ portable to other projects maybe
 // #endif
 
 // If defined, Dxyn waits for VBlank before drawing
-//#ifndef CHIP8_WAIT_VBLANK
-//#define CHIP8_WAIT_VBLANK //TODO
-//#endif
+// #ifndef CHIP8_WAIT_VBLANK
+// #define CHIP8_WAIT_VBLANK //TODO
+// #endif
 
 // If defined, 8xy6 and 8xyE only operate on Vx
 // If undefined, Vy is shifted and result is stored into Vx (Vx = Vy >> 1)
@@ -60,8 +60,11 @@ typedef uint8_t chip8_display_t[CHIP8_DISPLAY_HEIGHT][CHIP8_DISPLAY_WIDTH / 8];
 // Chip8 external functions
 typedef struct {
   uint8_t (*rand)(void);
+#ifdef CHIP8_USE_DRAW_CALLBACK
   void (*draw_display)(const chip8_display_t *display, void *user_data);
+#else 
   uint8_t display_update_flag; // Alternative to the callback, will just get set when necessary
+#endif // CHIP8_USE_DRAW_CALLBACK
   void *user_data; // So, this void pointer allows the backend to store stuff
 } chip8_interface_t;
 

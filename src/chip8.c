@@ -35,8 +35,10 @@ void chip8_initialize(chip8_t *chip8, const chip8_interface_t chip8_interface) {
   chip8->interface = chip8_interface;
   if (!chip8->interface.rand)
     chip8->interface.rand = NULL;
+#ifdef CHIP8_USE_DRAWCALLBACK
   if (!chip8->interface.draw_display)
     chip8->interface.draw_display = NULL;
+#endif /* ifdef CHIP8_USE_DRAWCALLBACK */
   // Setting PC
   chip8->PC = 0x200;
   // Loading Font
@@ -153,6 +155,8 @@ void chip8_timer_tick(chip8_t *chip8) {
 
 // 0nnn - SYS addr
 static inline void ins_sys_addr(chip8_t *chip8, uint16_t instruction) {
+  (void)chip8;
+  (void)instruction;
 #ifndef NDEBUG
   printf("Uninmplemented Instruction: 0nnn\n");
 #endif
@@ -165,13 +169,11 @@ static inline void ins_cls(chip8_t *chip8) {
   if (chip8->interface.draw_display)
     chip8->interface.draw_display((const chip8_display_t *)&chip8->display,
                                   chip8->interface.user_data);
-#endif /* ifdef CHIP8_USE_DRAWCALLBACK */
-#ifndef CHIP8_USE_DRAWCALLBACK
+#else
   chip8->interface.display_update_flag = 1;
 #endif /* ifndef CHIP8_USE_DRAWCALLBACK */
 #ifndef NDEBUG
-  if (!chip8->interface.draw_display)
-    chip8_print_display(chip8, '#', ' ');
+  chip8_print_display(chip8, '#', ' ');
 #endif
 }
 
@@ -431,8 +433,7 @@ static inline void ins_drw_vx_vy(chip8_t *chip8, uint16_t instruction) {
   unsigned char x = chip8->V[(instruction & 0x0F00) >> 8] % CHIP8_DISPLAY_WIDTH;
   unsigned char y =
       chip8->V[(instruction & 0x00F0) >> 4] % CHIP8_DISPLAY_HEIGHT;
-  unsigned char n =
-      chip8->V[(instruction & 0x000F)];
+  unsigned char n = chip8->V[(instruction & 0x000F)];
   assert(chip8->I < CHIP8_MEM_SIZE);
   assert(chip8->I + n < CHIP8_MEM_SIZE);
   unsigned char pixel_erased = 0;
@@ -454,13 +455,11 @@ static inline void ins_drw_vx_vy(chip8_t *chip8, uint16_t instruction) {
   if (chip8->interface.draw_display)
     chip8->interface.draw_display((const chip8_display_t *)&chip8->display,
                                   chip8->interface.user_data);
-#endif /* ifdef CHIP8_USE_DRAWCALLBACK */
-#ifndef CHIP8_USE_DRAWCALLBACK
+#else
   chip8->interface.display_update_flag = 1;
 #endif /* ifndef CHIP8_USE_DRAWCALLBACK */
 #ifndef NDEBUG
-  if (!chip8->interface.draw_display)
-    chip8_print_display(chip8, '#', ' ');
+  chip8_print_display(chip8, '#', ' ');
 #endif
 }
 
@@ -551,8 +550,7 @@ static inline void ins_ld_b_vx(chip8_t *chip8, uint16_t instruction) {
   assert(chip8->I + 2u < CHIP8_MEM_SIZE);
   uint8_t x = (instruction & 0x0F00) >> 8;
   chip8->memory[chip8->I] = (chip8->V[x] / 100) % 10;
-  chip8->memory[chip8->I + 1] =
-      (chip8->V[x] / 10) % 10;
+  chip8->memory[chip8->I + 1] = (chip8->V[x] / 10) % 10;
   chip8->memory[chip8->I + 2] = chip8->V[x] % 10;
 #ifndef NDEBUG
   chip8_print_registers(chip8, PRINT_V | PRINT_I);
