@@ -80,10 +80,10 @@ int main(int argc, char *argv[]) {
   srand((unsigned int)time(NULL)); // Seeding random number generator
   chip8_interface_t chip8_interface = {.rand = uint8_rand};
   if (backend == SDL) {
-#ifdef CHIP8_USE_DRAWCALLBACK
+#ifdef CHIP8_USE_DRAW_CALLBACK
     chip8_interface.draw_display = chip8_sdl_draw_display;
     chip8_interface.user_data = &chip8_sdl;
-#endif /* ifdef CHIP8_USE_DRAWCALLBACK */
+#endif /* ifdef CHIP8_USE_DRAW_CALLBACK */
   }
 
   // Initialize chip8 core

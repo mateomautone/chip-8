@@ -121,8 +121,6 @@ endif
 RELEASE_FLAGS = -O2
 # Disable debug asserts
 RELEASE_FLAGS += -DNDEBUG
-# Strip symbols from binary
-RELEASE_FLAGS += -s
 # Remove compiler identification
 RELEASE_FLAGS += -fno-ident
 # Put each function in its own section
@@ -175,8 +173,13 @@ valgrind: $(BIN)
 
 # Using RELEASE_FLAGS
 release: CFLAGS= $(CFLAGS_COMMON) $(RELEASE_FLAGS) $(VARIANT_FLAGS)
-release: clean
-release: $(BIN)
+release: clean $(BIN)
+	@echo "Stripping compiler/toolchain metadata..."
+	strip --strip-unneeded \
+	      --remove-section=.comment \
+	      --remove-section=.note.gnu.build-id \
+	      $(BIN)
+	@echo "Release build complete: $(BIN)"
 
 # For using with gprof
 profile: CFLAGS = $(CFLAGS_COMMON) -g -O0 -pg $(VARIANT_FLAGS)

@@ -20,6 +20,9 @@ portable to other projects maybe
 #define CHIP8_DISPLAY_HEIGHT 32u
 #define CHIP8_FONT_DATA_START 0x50u
 
+// Use callback draw function
+#define CHIP8_USE_DRAW_CALLBACK
+
 // If defined, 8xy1, 8xy2, and 8xy3 reset VF to 0 before/after the operation
 // #ifndef CHIP8_VF_RESET
 // #define CHIP8_VF_RESET

@@ -35,10 +35,10 @@ void chip8_initialize(chip8_t *chip8, const chip8_interface_t chip8_interface) {
   chip8->interface = chip8_interface;
   if (!chip8->interface.rand)
     chip8->interface.rand = NULL;
-#ifdef CHIP8_USE_DRAWCALLBACK
+#ifdef CHIP8_USE_DRAW_CALLBACK
   if (!chip8->interface.draw_display)
     chip8->interface.draw_display = NULL;
-#endif /* ifdef CHIP8_USE_DRAWCALLBACK */
+#endif /* ifdef CHIP8_USE_DRAW_CALLBACK */
   // Setting PC
   chip8->PC = 0x200;
   // Loading Font
@@ -122,7 +122,9 @@ int chip8_load_rom_from_file(chip8_t *chip8, const char *filename) {
     fclose(fd);
     return -1;
   }
-  fread(&chip8->memory[0x200], 1, filesize, fd);
+  size_t bytes_read = fread(&chip8->memory[0x200], 1, filesize, fd);
+  if (bytes_read != filesize)
+    printf("Error: expected %zu bytes, got %zu\n", filesize, bytes_read);
   fclose(fd);
   return 0;
 }
@@ -165,13 +167,13 @@ static inline void ins_sys_addr(chip8_t *chip8, uint16_t instruction) {
 // 00E0 - CLS
 static inline void ins_cls(chip8_t *chip8) {
   memset(chip8->display, 0x0, sizeof(chip8->display));
-#ifdef CHIP8_USE_DRAWCALLBACK
+#ifdef CHIP8_USE_DRAW_CALLBACK
   if (chip8->interface.draw_display)
     chip8->interface.draw_display((const chip8_display_t *)&chip8->display,
                                   chip8->interface.user_data);
 #else
   chip8->interface.display_update_flag = 1;
-#endif /* ifndef CHIP8_USE_DRAWCALLBACK */
+#endif /* ifndef CHIP8_USE_DRAW_CALLBACK */
 #ifndef NDEBUG
   chip8_print_display(chip8, '#', ' ');
 #endif
@@ -429,12 +431,67 @@ static inline void ins_rnd_vx_byte(chip8_t *chip8, uint16_t instruction) {
 }
 
 // Dxyn - DRW Vx, Vy, nibble
+#ifndef CHIP8_BUGGY
 static inline void ins_drw_vx_vy(chip8_t *chip8, uint16_t instruction) {
 #ifdef CHIP8_WAIT_VBLANK
   if (!chip8->interface.vblank_ready) {
     chip8->PC -= 2;
     return;
-  }else {
+  } else {
+    chip8->interface.vblank_ready = 0;
+  }
+#endif
+
+  uint8_t x = (instruction & 0x0F00) >> 8;
+  uint8_t y = (instruction & 0x00F0) >> 4;
+  uint8_t n = (instruction & 0x000F);
+  uint8_t Vx = chip8->V[x];
+  uint8_t Vy = chip8->V[y];
+  uint8_t xpos = Vx % CHIP8_DISPLAY_WIDTH;
+  uint8_t ypos = Vy % CHIP8_DISPLAY_HEIGHT;
+
+  assert(chip8->I < CHIP8_MEM_SIZE);
+  assert(chip8->I + n < CHIP8_MEM_SIZE);
+
+  chip8->V[0xF] = 0;
+  uint8_t set_vf = 0;
+
+  // Lets go row by row according to n
+  for (uint8_t row = 0; row < n; row++) {
+    uint8_t sprite_row = chip8->memory[chip8->I + row];
+    // It could be the case that drawing will cross a boundary,
+    // so I'll separate it into two bytes (xpos % 8)
+    uint8_t sprite_row_first = sprite_row >> (xpos % 8u);
+    uint8_t sprite_row_second = sprite_row << (8u - (xpos % 8u));
+    if (ypos + row < CHIP8_DISPLAY_HEIGHT) { // It will CLIP on the bottom
+      set_vf |= (chip8->display[ypos + row][xpos / 8u] & sprite_row_first) ? 1 : 0;
+      chip8->display[ypos + row][xpos / 8u] ^= sprite_row_first;
+      if ((xpos / 8u + 1u) < 8u) { // It will CLIP on right
+        set_vf |= (chip8->display[ypos + row][xpos / 8u + 1u] & sprite_row_second) ? 1 : 0;
+        chip8->display[ypos + row][xpos / 8u + 1u] ^= sprite_row_second;
+      }
+    }
+  }
+  chip8->V[0xF] = set_vf;
+
+#ifdef CHIP8_USE_DRAW_CALLBACK
+  if (chip8->interface.draw_display)
+    chip8->interface.draw_display((const chip8_display_t *)&chip8->display,
+                                  chip8->interface.user_data);
+#else
+  chip8->interface.display_update_flag = 1;
+#endif /* ifndef CHIP8_USE_DRAW_CALLBACK */
+#ifndef NDEBUG
+  chip8_print_display(chip8, '#', ' ');
+#endif
+}
+#else // The first buggy implementation TBR
+static inline void ins_drw_vx_vy(chip8_t *chip8, uint16_t instruction) {
+#ifdef CHIP8_WAIT_VBLANK
+  if (!chip8->interface.vblank_ready) {
+    chip8->PC -= 2;
+    return;
+  } else {
     chip8->interface.vblank_ready = 0;
   }
 #endif
@@ -459,17 +516,18 @@ static inline void ins_drw_vx_vy(chip8_t *chip8, uint16_t instruction) {
         (uint8_t)(spritebyte << (8 - (x % 8)));
   }
   chip8->V[0xF] = pixel_erased;
-#ifdef CHIP8_USE_DRAWCALLBACK
+#ifdef CHIP8_USE_DRAW_CALLBACK
   if (chip8->interface.draw_display)
     chip8->interface.draw_display((const chip8_display_t *)&chip8->display,
                                   chip8->interface.user_data);
 #else
   chip8->interface.display_update_flag = 1;
-#endif /* ifndef CHIP8_USE_DRAWCALLBACK */
+#endif /* ifndef CHIP8_USE_DRAW_CALLBACK */
 #ifndef NDEBUG
   chip8_print_display(chip8, '#', ' ');
 #endif
 }
+#endif /* ifndef CHIP8_BUGGY */
 
 // Ex9E - SKP Vx
 static inline void ins_skp_vx(chip8_t *chip8, uint16_t instruction) {

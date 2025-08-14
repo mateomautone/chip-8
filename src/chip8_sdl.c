@@ -175,10 +175,10 @@ void chip8_sdl_run(chip8_t *chip8, chip8_sdl_t *chip8_sdl,
         }
       }
     }
-#ifndef CHIP8_USE_DRAWCALLBACK
+#ifndef CHIP8_USE_DRAW_CALLBACK
     if (chip8->interface.display_update_flag)
       chip8_sdl_draw_display((const chip8_display_t *)&chip8->display, chip8_sdl);
-#endif /* ifdef CHIP8_USE_DRAWCALLBACK */
+#endif /* ifdef CHIP8_USE_DRAW_CALLBACK */
 #ifdef CHIP8_WAIT_VBLANK
     chip8->interface.vblank_ready = 1;
 #endif /* ifdef CHIP8_WAIT_VBLANK */
