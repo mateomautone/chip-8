@@ -21,19 +21,19 @@ portable to other projects maybe
 #define CHIP8_FONT_DATA_START 0x50u
 
 // If defined, 8xy1, 8xy2, and 8xy3 reset VF to 0 before/after the operation
-#ifndef CHIP8_VF_RESET
-#undef CHIP8_VF_RESET
-#endif
+// #ifndef CHIP8_VF_RESET
+// #define CHIP8_VF_RESET
+// #endif
 
 // If defined, Fx55 and Fx65 increment I after each register store/load
-#ifndef CHIP8_MEM_INCR
-#undef CHIP8_MEM_INCR
-#endif
+// #ifndef CHIP8_MEM_INCR
+// #define CHIP8_MEM_INCR
+// #endif
 
 // If defined, sprites that go off-screen are clipped instead of wrapped
-#ifndef CHIP8_CLIP
-#undef CHIP8_CLIP
-#endif
+// #ifndef CHIP8_CLIP
+// #define CHIP8_CLIP
+// #endif
 
 // If defined, Dxyn waits for VBlank before drawing
 //#ifndef CHIP8_WAIT_VBLANK
@@ -42,15 +42,15 @@ portable to other projects maybe
 
 // If defined, 8xy6 and 8xyE only operate on Vx
 // If undefined, Vy is shifted and result is stored into Vx (Vx = Vy >> 1)
-#ifndef CHIP8_SHIFT_VX_ONLY
-#define CHIP8_SHIFT_VX_ONLY
-#endif
+// #ifndef CHIP8_SHIFT_VX_ONLY
+// #define CHIP8_SHIFT_VX_ONLY
+// #endif
 
 // If defined, Bnnn uses Vx where X is the high nibble of nnn
 // If undefined, always uses V0
-#ifndef CHIP8_JUMP_USE_VX
-#undef CHIP8_JUMP_USE_VX
-#endif
+// #ifndef CHIP8_JUMP_USE_VX
+// #undef CHIP8_JUMP_USE_VX
+// #endif
 
 
 

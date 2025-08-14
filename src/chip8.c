@@ -272,10 +272,10 @@ static inline void ins_ld_vx_vy(chip8_t *chip8, uint16_t instruction) {
 static inline void ins_or_vx_vy(chip8_t *chip8, uint16_t instruction) {
   uint8_t x = (instruction & 0x0F00) >> 8;
   uint8_t y = (instruction & 0x00F0) >> 4;
+  chip8->V[x] |= chip8->V[y];
 #ifdef CHIP8_VF_RESET
   chip8->V[0xF] = 0;
 #endif
-  chip8->V[x] |= chip8->V[y];
 #ifndef NDEBUG
   chip8_print_registers(chip8, PRINT_V);
 #endif
@@ -285,10 +285,10 @@ static inline void ins_or_vx_vy(chip8_t *chip8, uint16_t instruction) {
 static inline void ins_and_vx_vy(chip8_t *chip8, uint16_t instruction) {
   uint8_t x = (instruction & 0x0F00) >> 8;
   uint8_t y = (instruction & 0x00F0) >> 4;
+  chip8->V[x] &= chip8->V[y];
 #ifdef CHIP8_VF_RESET
   chip8->V[0xF] = 0;
 #endif
-  chip8->V[x] &= chip8->V[y];
 #ifndef NDEBUG
   chip8_print_registers(chip8, PRINT_V);
 #endif
@@ -298,10 +298,10 @@ static inline void ins_and_vx_vy(chip8_t *chip8, uint16_t instruction) {
 static inline void ins_xor_vx_vy(chip8_t *chip8, uint16_t instruction) {
   uint8_t x = (instruction & 0x0F00) >> 8;
   uint8_t y = (instruction & 0x00F0) >> 4;
+  chip8->V[x] ^= chip8->V[y];
 #ifdef CHIP8_VF_RESET
   chip8->V[0xF] = 0;
 #endif
-  chip8->V[x] ^= chip8->V[y];
 #ifndef NDEBUG
   chip8_print_registers(chip8, PRINT_V);
 #endif
@@ -339,8 +339,9 @@ static inline void ins_shr_vx(chip8_t *chip8, uint16_t instruction) {
   chip8->V[x] >>= 1;
 #else
   uint8_t y = (instruction & 0x00F0) >> 4;
-  uint8_t set_vf = chip8->V[y] & 0x1;
-  chip8->V[x] = chip8->V[y] >> 1;
+  chip8->V[x] = chip8->V[y];
+  uint8_t set_vf = chip8->V[x] & 0x1;
+  chip8->V[x] >>= 1;
 #endif
   chip8->V[0xF] = set_vf;
 #ifndef NDEBUG
@@ -368,8 +369,9 @@ static inline void ins_shl_vx(chip8_t *chip8, uint16_t instruction) {
   chip8->V[x] <<= 1;
 #else
   uint8_t y = (instruction & 0x00F0) >> 4;
-  uint8_t set_vf = (chip8->V[y] >> 7) & 0x1;
-  chip8->V[x] = chip8->V[y] << 1;
+  chip8->V[x] = chip8->V[y];
+  uint8_t set_vf = (chip8->V[x] >> 7) & 0x1;
+  chip8->V[x] <<= 1;
 #endif
   chip8->V[0xF] = set_vf;
 #ifndef NDEBUG
