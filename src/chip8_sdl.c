@@ -179,6 +179,9 @@ void chip8_sdl_run(chip8_t *chip8, chip8_sdl_t *chip8_sdl,
     if (chip8->interface.display_update_flag)
       chip8_sdl_draw_display((const chip8_display_t *)&chip8->display, chip8_sdl);
 #endif /* ifdef CHIP8_USE_DRAWCALLBACK */
+#ifdef CHIP8_WAIT_VBLANK
+    chip8->interface.vblank_ready = 1;
+#endif /* ifdef CHIP8_WAIT_VBLANK */
     for (uint32_t i = 0; i < cycles_per_frame; i++) {
       chip8_step(chip8);
     }

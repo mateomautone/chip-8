@@ -430,6 +430,14 @@ static inline void ins_rnd_vx_byte(chip8_t *chip8, uint16_t instruction) {
 
 // Dxyn - DRW Vx, Vy, nibble
 static inline void ins_drw_vx_vy(chip8_t *chip8, uint16_t instruction) {
+#ifdef CHIP8_WAIT_VBLANK
+  if (!chip8->interface.vblank_ready) {
+    chip8->PC -= 2;
+    return;
+  }else {
+    chip8->interface.vblank_ready = 0;
+  }
+#endif
   unsigned char x = chip8->V[(instruction & 0x0F00) >> 8] % CHIP8_DISPLAY_WIDTH;
   unsigned char y =
       chip8->V[(instruction & 0x00F0) >> 4] % CHIP8_DISPLAY_HEIGHT;

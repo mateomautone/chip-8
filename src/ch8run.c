@@ -82,8 +82,8 @@ int main(int argc, char *argv[]) {
   if (backend == SDL) {
 #ifdef CHIP8_USE_DRAWCALLBACK
     chip8_interface.draw_display = chip8_sdl_draw_display;
-#endif /* ifdef CHIP8_USE_DRAWCALLBACK */
     chip8_interface.user_data = &chip8_sdl;
+#endif /* ifdef CHIP8_USE_DRAWCALLBACK */
   }
 
   // Initialize chip8 core
