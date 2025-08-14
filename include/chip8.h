@@ -13,12 +13,46 @@ emulator/interpreter core in this file, my aim is to try to make this core
 portable to other projects maybe
 */
 
-// Defines
+// Defines:
 #define CHIP8_MEM_SIZE 4096
 #define CHIP8_STACK_SIZE 16
-#define CHIP8_DISPLAY_WIDTH 64
-#define CHIP8_DISPLAY_HEIGHT 32
+#define CHIP8_DISPLAY_WIDTH 64u
+#define CHIP8_DISPLAY_HEIGHT 32u
 #define CHIP8_FONT_DATA_START 0x50
+
+// If defined, 8xy1, 8xy2, and 8xy3 reset VF to 0 before/after the operation
+#ifndef CHIP8_VF_RESET
+#undef CHIP8_VF_RESET
+#endif
+
+// If defined, Fx55 and Fx65 increment I after each register store/load
+#ifndef CHIP8_MEM_INCR
+#undef CHIP8_MEM_INCR
+#endif
+
+// If defined, sprites that go off-screen are clipped instead of wrapped
+#ifndef CHIP8_CLIP
+#undef CHIP8_CLIP
+#endif
+
+// If defined, Dxyn waits for VBlank before drawing
+//#ifndef CHIP8_WAIT_VBLANK
+//#define CHIP8_WAIT_VBLANK //TODO
+//#endif
+
+// If defined, 8xy6 and 8xyE only operate on Vx
+// If undefined, Vy is shifted and result is stored into Vx (Vx = Vy >> 1)
+#ifndef CHIP8_SHIFT_VX_ONLY
+#define CHIP8_SHIFT_VX_ONLY
+#endif
+
+// If defined, Bnnn uses Vx where X is the high nibble of nnn
+// If undefined, always uses V0
+#ifndef CHIP8_JUMP_USE_VX
+#undef CHIP8_JUMP_USE_VX
+#endif
+
+
 
 // Chip8 framebuffer (bit-packed version)
 typedef uint8_t chip8_display_t[CHIP8_DISPLAY_HEIGHT][CHIP8_DISPLAY_WIDTH / 8];

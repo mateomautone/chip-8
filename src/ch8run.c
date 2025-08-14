@@ -1,5 +1,6 @@
 #include <chip8.h>
 #include <chip8_sdl.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
@@ -12,8 +13,9 @@ int main(int argc, char *argv[]) {
   // Some variables
   typedef enum { NONE, SDL } Backend;
   Backend backend = SDL;
-  int cycles_per_frame = 20;
-  int render_scale = 16;
+  uint32_t cycles_per_frame = 20;
+  uint32_t render_scale = 16;
+  uint32_t target_fps = 60;
 
   // Parse options
   int opt;
@@ -37,7 +39,7 @@ int main(int argc, char *argv[]) {
       // chip8_step(&chip8);
       // }
       // return 0;
-      if (!(cycles_per_frame = atoi(optarg))) {
+      if (!(cycles_per_frame = (uint32_t)atoi(optarg))) {
         print_usage();
         return 1;
       }
@@ -93,7 +95,7 @@ int main(int argc, char *argv[]) {
 
   // Enter SDL Loop
   if (backend == SDL) {
-    chip8_sdl_run(&chip8, &chip8_sdl, cycles_per_frame);
+    chip8_sdl_run(&chip8, &chip8_sdl, cycles_per_frame, target_fps);
   }
 
   // Clean up stuff

@@ -1,10 +1,11 @@
+#include "SDL_stdinc.h"
 #include <SDL2/SDL.h>
 #include <chip8.h>
 #include <chip8_sdl.h>
 #include <stdint.h>
 
 int chip8_sdl_initialize(chip8_sdl_t *chip8_sdl, char *window_name,
-                         int render_scale, SDL_Color background_color,
+                         uint32_t render_scale, SDL_Color background_color,
                          SDL_Color foreground_color) {
   // Init SDL
   if (SDL_Init(SDL_INIT_VIDEO) != 0) {
@@ -14,7 +15,7 @@ int chip8_sdl_initialize(chip8_sdl_t *chip8_sdl, char *window_name,
   // Create window
   chip8_sdl->window = SDL_CreateWindow(
       window_name, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-      CHIP8_DISPLAY_WIDTH * render_scale, CHIP8_DISPLAY_HEIGHT * render_scale,
+      (int)(CHIP8_DISPLAY_WIDTH * render_scale), (int)(CHIP8_DISPLAY_HEIGHT * render_scale),
       SDL_WINDOW_SHOWN);
   if (!chip8_sdl->window) {
     printf("SDL_CreateWindow Error: %s\n", SDL_GetError());
@@ -94,9 +95,9 @@ void chip8_sdl_draw_display(const chip8_display_t *display, void *sdl_context) {
                          chip8_sdl->foreground_color.g,
                          chip8_sdl->foreground_color.b,
                          chip8_sdl->foreground_color.a);
-  for (int y = 0; y < CHIP8_DISPLAY_HEIGHT; y++) {
-    for (int x = 0; x < CHIP8_DISPLAY_WIDTH / 8; x++) {
-      for (int p = 7; p >= 0; p--) {
+  for (int32_t y = 0; y < (int32_t)CHIP8_DISPLAY_HEIGHT; y++) {
+    for (int32_t x = 0; x < (int32_t)CHIP8_DISPLAY_WIDTH / 8; x++) {
+      for (int8_t p = 7; p >= 0; p--) {
         if (((*display)[y][x] >> p) & 1) {
           SDL_RenderDrawPoint(chip8_sdl->renderer, x * 8 + 7 - p, y);
         }
@@ -148,11 +149,12 @@ static inline uint8_t sdl_key_to_chip8_key(SDL_Keycode key) {
 // Basic loop implementation
 // TODO: Improve timings and stuf
 void chip8_sdl_run(chip8_t *chip8, chip8_sdl_t *chip8_sdl,
-                   int cycles_per_frame) {
+                   uint32_t cycles_per_frame, uint32_t target_fps) {
   SDL_Event event;
   SDL_bool running = SDL_TRUE;
 
   while (running) {
+    Uint32 start_ticks = SDL_GetTicks();
     while (SDL_PollEvent(&event)) {
       if (event.type == SDL_QUIT) {
         running = SDL_FALSE;
@@ -177,11 +179,13 @@ void chip8_sdl_run(chip8_t *chip8, chip8_sdl_t *chip8_sdl,
     if (chip8->interface.display_update_flag)
       chip8_sdl_draw_display((const chip8_display_t *)&chip8->display, chip8_sdl);
 #endif /* ifdef CHIP8_USE_DRAWCALLBACK */
-    for (int i = 0; i < cycles_per_frame; i++) {
+    for (uint32_t i = 0; i < cycles_per_frame; i++) {
       chip8_step(chip8);
     }
     chip8_timer_tick(chip8);
-    SDL_Delay(16);
+    Uint32 end_ticks = SDL_GetTicks();
+    SDL_Delay((1000 / target_fps) - (start_ticks - end_ticks));
   }
+
 }
 

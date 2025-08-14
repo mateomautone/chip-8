@@ -1,6 +1,7 @@
 #ifndef CHIP8_SDL
 #define CHIP8_SDL
 
+#include <stdint.h>
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
@@ -22,7 +23,7 @@ typedef struct {
 } chip8_sdl_t;
 
 // Initialize SDL, returns 1 on error
-int chip8_sdl_initialize(chip8_sdl_t *chip8_sdl, char *window_name, int render_scale, SDL_Color background_color, SDL_Color foreground_color);
+int chip8_sdl_initialize(chip8_sdl_t *chip8_sdl, char *window_name, uint32_t render_scale, SDL_Color background_color, SDL_Color foreground_color);
 
 // Destroy SDL
 void chip8_sdl_destroy(chip8_sdl_t *chip8_sdl);
@@ -31,7 +32,7 @@ void chip8_sdl_destroy(chip8_sdl_t *chip8_sdl);
 void chip8_sdl_draw_display(const chip8_display_t *display, void *sdl_context);
 
 // Run the SDL Loop
-void chip8_sdl_run(chip8_t *chip8, chip8_sdl_t *chip8_sdl, int cycles_per_frame);
+void chip8_sdl_run(chip8_t *chip8, chip8_sdl_t *chip8_sdl, uint32_t cycles_per_frame, uint32_t target_fps);
 
 #ifndef NDEBUG
 void chip8_sdl_test(chip8_sdl_t *chip8_sdl);
