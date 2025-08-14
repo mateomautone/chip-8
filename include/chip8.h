@@ -14,11 +14,11 @@ portable to other projects maybe
 */
 
 // Defines:
-#define CHIP8_MEM_SIZE 4096
-#define CHIP8_STACK_SIZE 16
+#define CHIP8_MEM_SIZE 4096u
+#define CHIP8_STACK_SIZE 16u
 #define CHIP8_DISPLAY_WIDTH 64u
 #define CHIP8_DISPLAY_HEIGHT 32u
-#define CHIP8_FONT_DATA_START 0x50
+#define CHIP8_FONT_DATA_START 0x50u
 
 // If defined, 8xy1, 8xy2, and 8xy3 reset VF to 0 before/after the operation
 #ifndef CHIP8_VF_RESET

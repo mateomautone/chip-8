@@ -429,8 +429,10 @@ static inline void ins_drw_vx_vy(chip8_t *chip8, uint16_t instruction) {
   unsigned char x = chip8->V[(instruction & 0x0F00) >> 8] % CHIP8_DISPLAY_WIDTH;
   unsigned char y =
       chip8->V[(instruction & 0x00F0) >> 4] % CHIP8_DISPLAY_HEIGHT;
+  unsigned char n =
+      chip8->V[(instruction & 0x000F)];
   assert(chip8->I < CHIP8_MEM_SIZE);
-  assert(chip8->I + (instruction & 0x000F) < CHIP8_MEM_SIZE);
+  assert(chip8->I + n < CHIP8_MEM_SIZE);
   unsigned char pixel_erased = 0;
   for (unsigned char i = 0; i < (instruction & 0x000F); i++) {
     uint8_t spritebyte = chip8->memory[chip8->I + i];
@@ -544,7 +546,7 @@ static inline void ins_ld_f_vx(chip8_t *chip8, uint16_t instruction) {
 
 // Fx33 - LD B, Vx
 static inline void ins_ld_b_vx(chip8_t *chip8, uint16_t instruction) {
-  assert(chip8->I + 2 < CHIP8_MEM_SIZE);
+  assert(chip8->I + 2u < CHIP8_MEM_SIZE);
   uint8_t x = (instruction & 0x0F00) >> 8;
   chip8->memory[chip8->I] = (chip8->V[x] / 100) % 10;
   chip8->memory[chip8->I + 1] =
