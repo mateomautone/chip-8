@@ -114,4 +114,4 @@ void print_usage(void) {
   printf("\n");
 }
 
-uint8_t uint8_rand(void) { return (uint8_t)rand(); }
+uint8_t uint8_rand(void) { return (uint8_t)(rand() & 0xFF); }
